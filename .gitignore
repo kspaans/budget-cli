@@ -1,0 +1,4 @@
+node_modules/
+expenses.dat
+.ledger.json
+2budget.dat

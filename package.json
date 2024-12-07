@@ -1,0 +1,9 @@
+{
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.6.0"
+  },
+  "type": "module"
+}
