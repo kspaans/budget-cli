@@ -33,7 +33,7 @@ const tasks = []
 const a2tx = (tx) => {
   const credit_string = String(tx.amount).padStart(56 - tx.credit.length, ' ')
   const debit_string = String(-tx.amount).padStart(56 - tx.debit.length, ' ')
-  return `${tx.date} ${tx.isPosted ? '*' : ''} ${tx.payee}\n` +
+  return `${tx.date} ${tx.isPosted ? '*' : ' '} ${tx.payee}\n` +
     `  ${tx.credit}${credit_string} CAD\n` +
     `  ${tx.debit}${debit_string} CAD\n`
 }
