@@ -27,12 +27,18 @@ import { setTimeout } from 'node:timers/promises'
  */
 import db from './.ledger.json' with { 'type': 'json' }
 
+const config = {
+  amount_padding: 35,
+}
+
 const tasks = []
 
 const a2tx = (tx) => {
-  const credit_string = String(Number(tx.amount).toFixed(2)).padStart(56 - tx.credit.length, ' ')
-  const debit_string =  String(     (-tx.amount).toFixed(2)).padStart(56 - tx.debit.length,  ' ')
+  const credit_string = String(Number(tx.amount).toFixed(2)).padStart(config.amount_padding - tx.credit.length, ' ')
+  const debit_string =  String(     (-tx.amount).toFixed(2)).padStart(config.amount_padding - tx.debit.length,  ' ')
+  const recurring_string = tx.recurring_frequency ? `  ${tx.recurring_frequency}\n` : ''
   return `${tx.date} ${tx.isPosted ? '*' : ' '} ${tx.payee}\n` +
+    recurring_string +
     `  ${tx.credit}${credit_string} CAD\n` +
     `  ${tx.debit}${debit_string} CAD\n`
 }
@@ -120,29 +126,29 @@ if (projectType === 'e') {
         { key: 'g', value: 'Expenses:Groceries', label: 'Groceries' },
         { key: 'f', value: 'Expenses:Food', label: 'Food' },
         { key: 'c', value: 'Expenses:Coffee', label: 'Coffee', hint: 'oh no' },
-        { value: 'Expenses:Clothing', value: 'Clothing' },
-        { value: 'Expenses:Electricity', value: 'Electricity' },
-        { value: 'Expenses:Food', value: 'Food' },
-        { value: 'Expenses:Gifts', value: 'Gifts' },
-        { value: 'Expenses:Groceries', value: 'Groceries' },
-        { value: 'Expenses:Health', value: 'Health' },
-        { value: 'Expenses:Insurance', value: 'Insurance' },
-        { value: 'Expenses:Interest', value: 'Interest' },
-        { value: 'Expenses:Internet', value: 'Internet' },
-        { value: 'Expenses:Medical', value: 'Medical' },
-        { value: 'Expenses:Mortgage', value: 'Mortgage' },
-        { value: 'Expenses:Pets', value: 'Pets' },
-        { value: 'Expenses:Rent', value: 'Rent' },
-        { value: 'Expenses:Sports', value: 'Sports' },
-        { value: 'Expenses:Subscriptions', value: 'Subscriptions' },
-        { value: 'Expenses:Tax', value: 'Tax' },
-        { value: 'Expenses:Transport:Gas', value: 'Gas' },
-        { value: 'Expenses:Transport:Insurance', value: 'Car Insurance' },
-        { value: 'Expenses:Transport:Loan', value: 'Car Loan' },
-        { value: 'Expenses:Transport:Maint', value: 'Car Maintenance' },
-        { value: 'Expenses:Transport:Tolls', value: 'Road Tolls' },
-        { value: 'Expenses:Transport:Parking', value: 'Parking' },
-        { value: 'Expenses:Wireless', value: 'Wireless' },
+        { value: 'Expenses:Clothing', label: 'Clothing' },
+        { value: 'Expenses:Electricity', label: 'Electricity' },
+        { value: 'Expenses:Food', label: 'Food' },
+        { value: 'Expenses:Gifts', label: 'Gifts' },
+        { value: 'Expenses:Groceries', label: 'Groceries' },
+        { value: 'Expenses:Health', label: 'Health' },
+        { value: 'Expenses:Insurance', label: 'Insurance' },
+        { value: 'Expenses:Interest', label: 'Interest' },
+        { value: 'Expenses:Internet', label: 'Internet' },
+        { value: 'Expenses:Medical', label: 'Medical' },
+        { value: 'Expenses:Mortgage', label: 'Mortgage' },
+        { value: 'Expenses:Pets', label: 'Pets' },
+        { value: 'Expenses:Rent', label: 'Rent' },
+        { value: 'Expenses:Sports', label: 'Sports' },
+        { value: 'Expenses:Subscriptions', label: 'Subscriptions' },
+        { value: 'Expenses:Tax', label: 'Tax' },
+        { value: 'Expenses:Transport:Gas', label: 'Gas' },
+        { value: 'Expenses:Transport:Insurance', label: 'Car Insurance' },
+        { value: 'Expenses:Transport:Loan', label: 'Car Loan' },
+        { value: 'Expenses:Transport:Maint', label: 'Car Maintenance' },
+        { value: 'Expenses:Transport:Tolls', label: 'Road Tolls' },
+        { value: 'Expenses:Transport:Parking', label: 'Parking' },
+        { value: 'Expenses:Wireless', label: 'Wireless' },
       ],
     })
 
@@ -178,8 +184,38 @@ if (projectType === 'e') {
       }
     })
 
+    const recurring = await select({
+      message: 'Is it recurring?',
+      options: [
+        { value: 'y', label: 'Yes' },
+        { value: 'n', label: 'No' },
+      ],
+    })
+
+    let recurring_frequency = false
+    if (recurring === 'y') {
+      const frequency = await selectKey({
+        message: 'How often is it recurring?',
+        options: [
+          { key: 'w', value: 'w', label: 'Weekly' },
+          { key: 'b', value: 'b', label: 'Bi-Weekly (every two weeks)' },
+          { key: 't', value: 't', label: 'Bi-Monthly (twice a month)' },
+          { key: 'm', value: 'm', label: 'Monthly' },
+          { key: 'a', value: 'a', label: 'Annually' },
+        ]
+      })
+      const value_map = {
+        w: 'weekly',
+        b: 'bi-weekly',
+        t: 'bi-monthly',
+        m: 'monthly',
+        a: 'annually',
+      }
+      recurring_frequency = `; :recurring: ${value_map[frequency]}`
+    }
+
     db.transactions.push({
-      date, payee, amount, credit: expense_cat, debit: debit_cat
+      date, payee, amount, credit: expense_cat, debit: debit_cat, recurring_frequency
     })
 
     const credit_string = String(amount).padStart(56 - expense_cat.length, ' ')
