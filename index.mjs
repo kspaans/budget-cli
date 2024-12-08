@@ -1,6 +1,5 @@
 // BUGS
 // - [ ] pressing enter instead of `e` to enter an expense crashes
-// - [ ] always output numbers to 2 decimal places
 // - [ ] screen needs to be large enough to list all expense categories,
 //   need autocomplete!
 // - [ ] `new Date()` is in UTC
@@ -31,8 +30,8 @@ import db from './.ledger.json' with { 'type': 'json' }
 const tasks = []
 
 const a2tx = (tx) => {
-  const credit_string = String(tx.amount).padStart(56 - tx.credit.length, ' ')
-  const debit_string = String(-tx.amount).padStart(56 - tx.debit.length, ' ')
+  const credit_string = String(Number(tx.amount).toFixed(2)).padStart(56 - tx.credit.length, ' ')
+  const debit_string =  String(     (-tx.amount).toFixed(2)).padStart(56 - tx.debit.length,  ' ')
   return `${tx.date} ${tx.isPosted ? '*' : ' '} ${tx.payee}\n` +
     `  ${tx.credit}${credit_string} CAD\n` +
     `  ${tx.debit}${debit_string} CAD\n`
