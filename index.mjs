@@ -8,11 +8,17 @@
 // - [ ] can't use true/false in selectKey()?
 
 // TODO autocomplete (needs inquirer)
+// TODO use event-sourcing model to simplify the representation,
+//      reconciliation, and input of transactions and posting events
+// TODO fireproof-storage for the log of transactions?
 // TODO list of recurring expenses, ask to add them
-// TODO get list of accounts from JSON, workflow to create them
+// TODO get list of accounts from JSON
+// TODO workflow to create list of accounts
 // TODO edit transactions
 // TODO support splitting TX e.g. costco or amazon
 // TODO have it integrate with Wave API (for corp???)
+// TODO browser extension to scrape/download from banks
+// TODO parse quicken format from RBC
 
 import { intro, cancel, isCancel, log, note, outro, select, selectKey, text } from '@clack/prompts';
 import fs from 'node:fs'
@@ -66,17 +72,13 @@ const out = fs.createWriteStream('./expenses.dat')
   });
 
 const quit = () => {
-  note(
-    db.transactions
-      .sort((a,b) => ((a.date < b.date) ? -1 : 1))
-      .map(a2tx)
-      .join('\n'),
-    'Recorded transactions:'
-  )
   fs.writeFileSync('.ledger.json', JSON.stringify({
-    transactions: db.transactions.sort((a,b) => ((a.date < b.date) ? -1 : 1)),
-    ...db
-  }, null, '  '))
+      transactions: db.transactions.sort((a,b) => ((a.date < b.date) ? -1 : 1)),
+      ...db
+    },
+    null,
+    '  '
+  ))
   fs.writeFileSync('2budget.dat',
     db.transactions
       .sort((a,b) => ((a.date < b.date) ? -1 : 1))
@@ -311,6 +313,80 @@ if (projectType === 'p') {
   outro(`You're all set!`);
   out.end()
   process.exit(0)
+}
+
+if (projectType === 'i') {
+  const date = await text({
+    message: 'When did the income occur?',
+    placeholder: (new Date()).toISOString().split('T')[0],
+    initialValue: (new Date()).toISOString().split('T')[0],
+    validate: (d) => {
+      if (typeof d === 'undefined' || d === '') {
+        return 'Please enter a date.'
+      }
+      const result = Date.parse(d)
+      if (isNaN(result) || result === 'Invalid Date') {
+        return 'Please enter a valid date in YYYY-MM-DD format.'
+      }
+    }
+  })
+
+  if (isCancel(date)) {
+    cancel('Ok, leaving for now')
+    process.exit(0)
+    quit()
+  }
+
+  const amount = await text({
+    message: 'OK, what\'s the amount?',
+    placeholder: "12.34",
+    validate: (value) => {
+      const num = Number(value)
+      if (isNaN(value) || typeof value === 'undefined' || value === '') {
+        return 'Please enter a number.'
+      }
+    }
+  })
+
+  const income_cat = await select({
+    message: `How should this be categorized?`,
+    options: [
+      { value: 'Income:Salary', label: 'Salary' },
+      { value: 'Income:Gifts', label: 'Gifts' },
+      { value: 'Income:Interest', label: 'Interest' },
+      { value: 'Income:Misc', label: 'Miscellaneous' },
+    ],
+  })
+
+  let credit_cat = await select({
+      message: 'Where did it get deposited?',
+      options: [
+        { value: 'Assets:Bob\'s Chequing', label: 'Bob\'s Chequing' },
+        { value: 'Assets:Alice\'s Savings', label: 'Alice\'s Savings' },
+      ],
+    })
+
+  const payee = await text({
+    message: 'Who paid you?',
+    placeholder: "work",
+    validate: (value) => {
+      if (value.length === 0) {
+         'Please enter a payee name.'
+      }
+    }
+  })
+
+  db.transactions.push({
+    date, payee, amount, credit: credit_cat, debit: income_cat
+  })
+
+  if (isCancel(income_cat)) {
+    cancel('Ok, leaving for now')
+    process.exit(0)
+    quit()
+  }
+
+  quit()
 }
 
 process.exit(0)
