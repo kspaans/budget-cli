@@ -7,12 +7,12 @@
 // - [ ] unsettled top-level await when pressing Ctrl-D during prompts
 // - [ ] can't use true/false in selectKey()?
 
+// TODO parameterize list of liability accounts
 // TODO autocomplete (needs inquirer)
 // TODO use event-sourcing model to simplify the representation,
 //      reconciliation, and input of transactions and posting events
 // TODO fireproof-storage for the log of transactions?
 // TODO list of recurring expenses, ask to add them
-// TODO get list of accounts from JSON
 // TODO workflow to create list of accounts
 // TODO edit transactions
 // TODO support splitting TX e.g. costco or amazon
@@ -33,8 +33,12 @@ import { setTimeout } from 'node:timers/promises'
  */
 import db from './.ledger.json' with { 'type': 'json' }
 
+let data
 const config = {
   amount_padding: 35,
+  income_accounts: [],
+  expense_accounts: [],
+  asset_accounts: [],
 }
 
 const tasks = []
@@ -51,6 +55,23 @@ const a2tx = (tx) => {
 
 intro(`LEDGER INTERACTIVE ACCOUNTING`);
 
+try {
+  data = fs.readFileSync('./.accounts.json', { encoding: 'utf8' })
+  const accounts = JSON.parse(data)
+  config.expense_accounts = accounts.expense_accounts
+  config.income_accounts  = accounts.income_accounts
+  config.asset_accounts   = accounts.asset_accounts
+} catch (err) {
+  log.warn(`Error when intializing accounts`)
+  if (err.code === 'ENOENT') {
+    log.warn(`It looks like your .accounts.json file is missing, please creat it`)
+  } else {
+    log.warn(`Error code ${err.code}`)
+  }
+  process.exit(1)
+}
+
+
 const projectType = await selectKey({ // maybe try `select()` instead so enter works?
   message: 'What do you want to do?',
   initialValue: 'e',
@@ -61,6 +82,7 @@ const projectType = await selectKey({ // maybe try `select()` instead so enter w
     { key: 'c', value: 'c', label: 'Credit Card Statement' },
     { key: 'i', value: 'i', label: 'Record Income or transfer' },
     { key: 'p', value: 'p', label: 'Mark transactions as Posted' },
+    { key: 'o', value: 'o', label: 'Add or Adjust Opening Balances' },
     { key: 'q', value: 'q', label: 'Exit', hint: 'niiiiice work' },
   ],
 });
@@ -123,45 +145,12 @@ if (projectType === 'e') {
     })
     const expense_cat = await select({
       message: `How should this be categorized?`,
-      options: [
-        { key: 'm', value: 'Expenses:Misc', label: 'Misc Expense' },
-        { key: 'g', value: 'Expenses:Groceries', label: 'Groceries' },
-        { key: 'f', value: 'Expenses:Food', label: 'Food' },
-        { key: 'c', value: 'Expenses:Coffee', label: 'Coffee', hint: 'oh no' },
-        { value: 'Expenses:Clothing', label: 'Clothing' },
-        { value: 'Expenses:Electricity', label: 'Electricity' },
-        { value: 'Expenses:Food', label: 'Food' },
-        { value: 'Expenses:Gifts', label: 'Gifts' },
-        { value: 'Expenses:Groceries', label: 'Groceries' },
-        { value: 'Expenses:Health', label: 'Health' },
-        { value: 'Expenses:Insurance', label: 'Insurance' },
-        { value: 'Expenses:Interest', label: 'Interest' },
-        { value: 'Expenses:Internet', label: 'Internet' },
-        { value: 'Expenses:Medical', label: 'Medical' },
-        { value: 'Expenses:Mortgage', label: 'Mortgage' },
-        { value: 'Expenses:Pets', label: 'Pets' },
-        { value: 'Expenses:Rent', label: 'Rent' },
-        { value: 'Expenses:Sports', label: 'Sports' },
-        { value: 'Expenses:Subscriptions', label: 'Subscriptions' },
-        { value: 'Expenses:Tax', label: 'Tax' },
-        { value: 'Expenses:Transport:Gas', label: 'Gas' },
-        { value: 'Expenses:Transport:Insurance', label: 'Car Insurance' },
-        { value: 'Expenses:Transport:Loan', label: 'Car Loan' },
-        { value: 'Expenses:Transport:Maint', label: 'Car Maintenance' },
-        { value: 'Expenses:Transport:Tolls', label: 'Road Tolls' },
-        { value: 'Expenses:Transport:Parking', label: 'Parking' },
-        { value: 'Expenses:Wireless', label: 'Wireless' },
-      ],
+      options: config.expense_accounts
     })
 
     let debit_cat = await select({
         message: 'Debit from where?',
-        options: [
-          { value: 'Assets:Bob\'s Chequing', label: 'Bob\'s Chequing' },
-          { value: 'Assets:Alice\'s Savings', label: 'Alice\'s Savings' },
-          { value: 'Assets:Shared Savings', label: 'Shared Savings' },
-          { value: 'CC', label: 'Credit Card' },
-        ],
+        options: config.asset_accounts.append({ value: 'CC', label: 'Credit Card' }),
       })
 
     if (debit_cat === 'CC') {
@@ -169,9 +158,12 @@ if (projectType === 'e') {
         message: 'Which card?',
         options: [
           { value: 'Liabilities:CC:Amex', label: 'Amex' },
+          { value: 'Liabilities:CC:CIBC', label: 'CIBC MC' },
+          { value: 'Liabilities:CC:CIBCV', label: 'CIBC Visa' },
           { value: 'Liabilities:CC:MBNA', label: 'MBNA' },
           { value: 'Liabilities:CC:Neo', label: 'Neo Financial MC' },
           { value: 'Liabilities:CC:RBCCash', label: 'RBC Cashback' },
+          { value: 'Liabilities:CC:RBCMC', label: 'RBC World Elite MC' },
         ],
       })
     }
@@ -350,12 +342,7 @@ if (projectType === 'i') {
 
   const income_cat = await select({
     message: `How should this be categorized?`,
-    options: [
-      { value: 'Income:Salary', label: 'Salary' },
-      { value: 'Income:Gifts', label: 'Gifts' },
-      { value: 'Income:Interest', label: 'Interest' },
-      { value: 'Income:Misc', label: 'Miscellaneous' },
-    ],
+    options: config.income_accounts,
   })
 
   let credit_cat = await select({
@@ -385,6 +372,49 @@ if (projectType === 'i') {
     process.exit(0)
     quit()
   }
+
+  quit()
+}
+
+if (projectType === 'o') {
+  const payee = 'Opening Balances'
+  const debit_cat = 'Equity:Opening Balances'
+
+  const date = await text({
+    message: 'When did the expense occur?',
+    placeholder: (new Date()).toISOString().split('T')[0],
+    initialValue: (new Date()).toISOString().split('T')[0],
+    validate: (d) => {
+      if (typeof d === 'undefined' || d === '') {
+        return 'Please enter a date.'
+      }
+      const result = Date.parse(d)
+      if (isNaN(result) || result === 'Invalid Date') {
+        return 'Please enter a valid date in YYYY-MM-DD format.'
+      }
+    }
+  })
+
+  const asset = await select({
+    message: 'Which account needs an opening balance?',
+    options: config.asset_accounts,
+  })
+
+  const amount = await text({
+    message: 'OK, what\'s the amount?',
+    placeholder: "12.34",
+    validate: (value) => {
+      const num = Number(value)
+      if (isNaN(value) || typeof value === 'undefined' || value === '') {
+        return 'Please enter a number.'
+      }
+    },
+  })
+
+  db.transactions.push({
+    date, payee, amount, credit: asset, debit: debit_cat
+  })
+
 
   quit()
 }

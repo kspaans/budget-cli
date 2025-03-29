@@ -9,11 +9,17 @@ To get started, install Node.js v22 or higher. Then run:
 
 ```
 npm install
+cp .accounts.sample .accounts.json
 node index.mjs
 ```
 
 Then simply follow the prompts. Expense entry (`e`) is the most thorough. The
 `.ledger.json` file saves your recorded transactions between sessions.
+
+### Accounts
+
+If you'd like to customize the account names and prompts, edit the
+`.accounts.json` file.
 
 ## See Also
 

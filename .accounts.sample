@@ -1,0 +1,38 @@
+{
+  "expense_accounts": [
+    { "value": "Expenses:Clothing", "label": "Clothing" },
+    { "value": "Expenses:Electricity", "label": "Electricity" },
+    { "value": "Expenses:Food", "label": "Food" },
+    { "value": "Expenses:Gifts", "label": "Gifts" },
+    { "value": "Expenses:Groceries", "label": "Groceries" },
+    { "value": "Expenses:Health", "label": "Health" },
+    { "value": "Expenses:Insurance", "label": "Insurance" },
+    { "value": "Expenses:Interest", "label": "Interest" },
+    { "value": "Expenses:Internet", "label": "Internet" },
+    { "value": "Expenses:Medical", "label": "Medical" },
+    { "value": "Expenses:Mortgage", "label": "Mortgage" },
+    { "value": "Expenses:Pets", "label": "Pets" },
+    { "value": "Expenses:Rent", "label": "Rent" },
+    { "value": "Expenses:Sports", "label": "Sports" },
+    { "value": "Expenses:Subscriptions", "label": "Subscriptions" },
+    { "value": "Expenses:Tax", "label": "Tax" },
+    { "value": "Expenses:Transport:Gas", "label": "Gas" },
+    { "value": "Expenses:Transport:Insurance", "label": "Car Insurance" },
+    { "value": "Expenses:Transport:Loan", "label": "Car Loan" },
+    { "value": "Expenses:Transport:Maint", "label": "Car Maintenance" },
+    { "value": "Expenses:Transport:Tolls", "label": "Road Tolls" },
+    { "value": "Expenses:Transport:Parking", "label": "Parking" },
+    { "value": "Expenses:Wireless", "label": "Wireless" }
+  ],
+  "income_accounts": [
+    { "value": "Income:Salary", "label": "Salary" },
+    { "value": "Income:Gifts", "label": "Gifts" },
+    { "value": "Income:Interest", "label": "Interest" },
+    { "value": "Income:Misc", "label": "Miscellaneous" }
+  ],
+  "asset_accounts": [
+    { "value": "Assets:Bob's Chequing", "label": "Bob's Chequing" },
+    { "value": "Assets:Alice's Savings", "label": "Alice's Savings" },
+    { "value": "Assets:Shared Savings", "label": "Shared Savings" }
+  ]
+}

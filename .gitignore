@@ -1,4 +1,5 @@
 node_modules/
 expenses.dat
 .ledger.json
+.accounts.json
 2budget.dat
