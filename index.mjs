@@ -4,11 +4,11 @@
 //   need autocomplete!
 // - [ ] `new Date()` is in UTC
 // - [ ] better date validation
-// - [ ] unsettled top-level await when pressing Ctrl-D during prompts
 // - [ ] can't use true/false in selectKey()?
 
 // TODO parameterize list of liability accounts
 // TODO autocomplete (needs inquirer)
+// TODO track CC available-credit
 // TODO use event-sourcing model to simplify the representation,
 //      reconciliation, and input of transactions and posting events
 // TODO fireproof-storage for the log of transactions?
@@ -71,22 +71,6 @@ try {
   process.exit(1)
 }
 
-
-const projectType = await selectKey({ // maybe try `select()` instead so enter works?
-  message: 'What do you want to do?',
-  initialValue: 'e',
-  options: [
-    { key: '_', value: '_', label: 'I\'m not sure what to do...', hint: 'We can help!' },
-    { key: 'e', value: 'e', label: 'Enter an expense', hint: 'e' },
-    { key: 'r', value: 'r', label: 'Reconcile CSV' },
-    { key: 'c', value: 'c', label: 'Credit Card Statement' },
-    { key: 'i', value: 'i', label: 'Record Income or transfer' },
-    { key: 'p', value: 'p', label: 'Mark transactions as Posted' },
-    { key: 'o', value: 'o', label: 'Add or Adjust Opening Balances' },
-    { key: 'q', value: 'q', label: 'Exit', hint: 'niiiiice work' },
-  ],
-});
-
 const out = fs.createWriteStream('./expenses.dat')
   .on("end", async () => {
     await setTimeout(500);
@@ -109,17 +93,39 @@ const quit = () => {
   )
 }
 
-if (projectType === 'q') {
-  quit()
-  outro(`You're all set!`);
-  out.end()
-  process.exit(0)
-}
+async function main_loop() {
+  while (true) {
+    const projectType = await selectKey({ // maybe try `select()` instead so enter works?
+      message: 'What do you want to do?',
+      initialValue: 'e',
+      options: [
+        { key: '_', value: '_', label: 'I\'m not sure what to do...', hint: 'We can help!' },
+        { key: 'e', value: 'e', label: 'Enter an expense', hint: 'e' },
+        { key: 'r', value: 'r', label: 'Reconcile CSV' },
+        { key: 'c', value: 'c', label: 'Credit Card Statement' },
+        { key: 'i', value: 'i', label: 'Record Income' },
+        { key: 'p', value: 'p', label: 'Mark transactions as Posted' },
+        { key: 'o', value: 'o', label: 'Add or Adjust Opening Balances' },
+        { key: 't', value: 't', label: 'Transfer balances between accounts' },
+        { key: 'q', value: 'q', label: 'Exit', hint: 'niiiiice work' },
+      ],
+    });
 
-if (projectType === 'e') {
+    switch (projectType) {
+      case 'q':
+        quit()
+        outro(`You're all set!`);
+        out.end()
+        process.exit(0)
+
+      case 't':
+        await transfer()
+        break;
+
+      case 'e': {
   while (true) {
     const date = await text({
-      message: 'When did the expense occur?',
+      message: 'When did/will the expense occur?',
       placeholder: (new Date()).toISOString().split('T')[0],
       initialValue: (new Date()).toISOString().split('T')[0],
       validate: (d) => {
@@ -132,6 +138,11 @@ if (projectType === 'e') {
         }
       }
     })
+
+    if (isCancel(date)) {
+      cancel('Whoops, OK')
+      break
+    }
 
     const amount = await text({
       message: 'OK, what\'s the amount?',
@@ -150,7 +161,7 @@ if (projectType === 'e') {
 
     let debit_cat = await select({
         message: 'Debit from where?',
-        options: config.asset_accounts.append({ value: 'CC', label: 'Credit Card' }),
+        options: config.asset_accounts.concat({ value: 'CC', label: 'Credit Card' }),
       })
 
     if (debit_cat === 'CC') {
@@ -243,9 +254,10 @@ if (projectType === 'e') {
   outro(`You're all set!`);
   out.end()
   process.exit(0)
-} 
+        break
+      }
 
-if (projectType === 'c') {
+      case 'c': {
   const prev_bal = await text({
     message: 'What was the previous balance?',
     placeholder: "1,234.56",
@@ -256,6 +268,13 @@ if (projectType === 'c') {
       }
     }
   })
+
+  if (isCancel(prev_bal)) {
+    cancel('Whoops, OK')
+    quit()
+    process.exit(0)
+  }
+
   const curr_bal = await text({
     message: 'What is the current balance?',
     placeholder: "1,234.56",
@@ -286,9 +305,10 @@ if (projectType === 'c') {
       }
     }*/
   })
-}
+  break
+      }
 
-if (projectType === 'p') {
+      case 'p': {
   note('Mark transactions as posted or not.')
   for await (const tx of db.transactions) {
      const value = await selectKey({
@@ -298,6 +318,10 @@ if (projectType === 'p') {
         { key: 'n', value: 'n', label: 'Not Posted' }
       ],
     })
+    if (isCancel(value)) {
+      cancel('Ok, leaving for now')
+      break
+    }
     tx.isPosted = value === 'p'
   }
 
@@ -305,83 +329,128 @@ if (projectType === 'p') {
   outro(`You're all set!`);
   out.end()
   process.exit(0)
+  break;
+      }
+
+      case 'i': {
+        const date = await text({
+          message: 'When did the income occur?',
+          placeholder: (new Date()).toISOString().split('T')[0],
+          initialValue: (new Date()).toISOString().split('T')[0],
+          validate: (d) => {
+            if (typeof d === 'undefined' || d === '') {
+              return 'Please enter a date.'
+            }
+            const result = Date.parse(d)
+            if (isNaN(result) || result === 'Invalid Date') {
+              return 'Please enter a valid date in YYYY-MM-DD format.'
+            }
+          }
+        })
+
+        if (isCancel(date)) {
+          cancel('Ok, leaving for now')
+          process.exit(0)
+          quit()
+        }
+
+        const amount = await text({
+          message: 'OK, what\'s the amount?',
+          placeholder: "12.34",
+          validate: (value) => {
+            const num = Number(value)
+            if (isNaN(value) || typeof value === 'undefined' || value === '') {
+              return 'Please enter a number.'
+            }
+          }
+        })
+
+        const income_cat = await select({
+          message: `How should this be categorized?`,
+          options: config.income_accounts,
+        })
+
+        const credit_cat = await select({
+            message: 'Where did it get deposited?',
+            options: config.asset_accounts,
+          })
+
+        const payee = await text({
+          message: 'Who paid you?',
+          placeholder: "work",
+          validate: (value) => {
+            if (value.length === 0) {
+               'Please enter a payee name.'
+            }
+          }
+        })
+
+        db.transactions.push({
+          date, payee, amount, credit: credit_cat, debit: income_cat
+        })
+
+        if (isCancel(income_cat)) {
+          cancel('Ok, leaving for now')
+          process.exit(0)
+          quit()
+        }
+
+        quit()
+        break;
+      }
+
+      case 'o': {
+        const payee = 'Opening Balances'
+        const debit_cat = 'Equity:Opening Balances'
+
+        const date = await text({
+          message: 'When did the expense occur?',
+          placeholder: (new Date()).toISOString().split('T')[0],
+          initialValue: (new Date()).toISOString().split('T')[0],
+          validate: (d) => {
+            if (typeof d === 'undefined' || d === '') {
+              return 'Please enter a date.'
+            }
+            const result = Date.parse(d)
+            if (isNaN(result) || result === 'Invalid Date') {
+              return 'Please enter a valid date in YYYY-MM-DD format.'
+            }
+          }
+        })
+
+        const asset = await select({
+          message: 'Which account needs an opening balance?',
+          options: config.asset_accounts,
+        })
+
+        const amount = await text({
+          message: 'OK, what\'s the amount?',
+          placeholder: "12.34",
+          validate: (value) => {
+            const num = Number(value)
+            if (isNaN(value) || typeof value === 'undefined' || value === '') {
+              return 'Please enter a number.'
+            }
+          },
+        })
+
+        db.transactions.push({
+          date, payee, amount, credit: asset, debit: debit_cat
+        })
+
+
+        quit()
+        break;
+      }
+    }
+  }
 }
 
-if (projectType === 'i') {
-  const date = await text({
-    message: 'When did the income occur?',
-    placeholder: (new Date()).toISOString().split('T')[0],
-    initialValue: (new Date()).toISOString().split('T')[0],
-    validate: (d) => {
-      if (typeof d === 'undefined' || d === '') {
-        return 'Please enter a date.'
-      }
-      const result = Date.parse(d)
-      if (isNaN(result) || result === 'Invalid Date') {
-        return 'Please enter a valid date in YYYY-MM-DD format.'
-      }
-    }
-  })
-
-  if (isCancel(date)) {
-    cancel('Ok, leaving for now')
-    process.exit(0)
-    quit()
-  }
-
-  const amount = await text({
-    message: 'OK, what\'s the amount?',
-    placeholder: "12.34",
-    validate: (value) => {
-      const num = Number(value)
-      if (isNaN(value) || typeof value === 'undefined' || value === '') {
-        return 'Please enter a number.'
-      }
-    }
-  })
-
-  const income_cat = await select({
-    message: `How should this be categorized?`,
-    options: config.income_accounts,
-  })
-
-  let credit_cat = await select({
-      message: 'Where did it get deposited?',
-      options: [
-        { value: 'Assets:Bob\'s Chequing', label: 'Bob\'s Chequing' },
-        { value: 'Assets:Alice\'s Savings', label: 'Alice\'s Savings' },
-      ],
-    })
-
-  const payee = await text({
-    message: 'Who paid you?',
-    placeholder: "work",
-    validate: (value) => {
-      if (value.length === 0) {
-         'Please enter a payee name.'
-      }
-    }
-  })
-
-  db.transactions.push({
-    date, payee, amount, credit: credit_cat, debit: income_cat
-  })
-
-  if (isCancel(income_cat)) {
-    cancel('Ok, leaving for now')
-    process.exit(0)
-    quit()
-  }
-
-  quit()
-}
-
-if (projectType === 'o') {
-  const payee = 'Opening Balances'
-  const debit_cat = 'Equity:Opening Balances'
+async function transfer() {
+  const payee = 'Transfer'
 
   const date = await text({
-    message: 'When did the expense occur?',
+    message: 'When did the transfer occur?',
     placeholder: (new Date()).toISOString().split('T')[0],
     initialValue: (new Date()).toISOString().split('T')[0],
     validate: (d) => {
@@ -396,7 +465,7 @@ if (projectType === 'o') {
   })
 
   const asset = await select({
-    message: 'Which account needs an opening balance?',
+    message: 'Where did you it transfer to?',
     options: config.asset_accounts,
   })
 
@@ -410,13 +479,14 @@ if (projectType === 'o') {
       }
     },
   })
-
-  db.transactions.push({
-    date, payee, amount, credit: asset, debit: debit_cat
+  const debit = await select({
+    message: 'Where did the transfer come from?',
+    options: config.asset_accounts,
   })
 
-
-  quit()
+  db.transactions.push({
+    date, payee, amount, credit: asset, debit
+  })
 }
 
-process.exit(0)
+main_loop()
