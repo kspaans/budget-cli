@@ -34,5 +34,8 @@
     { "value": "Assets:Bob's Chequing", "label": "Bob's Chequing" },
     { "value": "Assets:Alice's Savings", "label": "Alice's Savings" },
     { "value": "Assets:Shared Savings", "label": "Shared Savings" }
+  ],
+  "liability_accounts: [
+    { "value": "Liabilities:Credit Card", "label": "Credit Card" },
   ]
 }

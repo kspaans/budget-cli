@@ -6,7 +6,6 @@
 // - [ ] better date validation
 // - [ ] can't use true/false in selectKey()?
 
-// TODO parameterize list of liability accounts
 // TODO autocomplete (needs inquirer)
 // TODO track CC available-credit
 // TODO use event-sourcing model to simplify the representation,
@@ -24,6 +23,8 @@ import { intro, cancel, isCancel, log, note, outro, select, selectKey, text } fr
 import fs from 'node:fs'
 import { setTimeout } from 'node:timers/promises'
 
+import recurring from './recurring.mjs'
+
 /**
  * {
  *   transactions: [ {amount:1, account:"a", isPosted:true}, ...],
@@ -39,6 +40,7 @@ const config = {
   income_accounts: [],
   expense_accounts: [],
   asset_accounts: [],
+  liability_accounts: [],
 }
 
 const tasks = []
@@ -58,9 +60,10 @@ intro(`LEDGER INTERACTIVE ACCOUNTING`);
 try {
   data = fs.readFileSync('./.accounts.json', { encoding: 'utf8' })
   const accounts = JSON.parse(data)
-  config.expense_accounts = accounts.expense_accounts
-  config.income_accounts  = accounts.income_accounts
-  config.asset_accounts   = accounts.asset_accounts
+  config.expense_accounts   = accounts.expense_accounts
+  config.income_accounts    = accounts.income_accounts
+  config.asset_accounts     = accounts.asset_accounts
+  config.liability_accounts = accounts.liability_accounts
 } catch (err) {
   log.warn(`Error when intializing accounts`)
   if (err.code === 'ENOENT') {
@@ -103,6 +106,7 @@ async function main_loop() {
         { key: 'e', value: 'e', label: 'Enter an expense', hint: 'e' },
         { key: 'r', value: 'r', label: 'Reconcile CSV' },
         { key: 'c', value: 'c', label: 'Credit Card Statement' },
+        { key: 'u', value: 'u', label: 'stuff Recurring Transactions stuff...' },
         { key: 'i', value: 'i', label: 'Record Income' },
         { key: 'p', value: 'p', label: 'Mark transactions as Posted' },
         { key: 'o', value: 'o', label: 'Add or Adjust Opening Balances' },
@@ -167,15 +171,7 @@ async function main_loop() {
     if (debit_cat === 'CC') {
       debit_cat =  await select({
         message: 'Which card?',
-        options: [
-          { value: 'Liabilities:CC:Amex', label: 'Amex' },
-          { value: 'Liabilities:CC:CIBC', label: 'CIBC MC' },
-          { value: 'Liabilities:CC:CIBCV', label: 'CIBC Visa' },
-          { value: 'Liabilities:CC:MBNA', label: 'MBNA' },
-          { value: 'Liabilities:CC:Neo', label: 'Neo Financial MC' },
-          { value: 'Liabilities:CC:RBCCash', label: 'RBC Cashback' },
-          { value: 'Liabilities:CC:RBCMC', label: 'RBC World Elite MC' },
-        ],
+        options: config.liability_accounts,
       })
     }
 
@@ -217,6 +213,9 @@ async function main_loop() {
         a: 'annually',
       }
       recurring_frequency = `; :recurring: ${value_map[frequency]}`
+      db.recurring.push({
+        start_date: date, date, payee, amount, credit: expense_cat, debit: debit_cat, frequency
+      })
     }
 
     db.transactions.push({
@@ -330,6 +329,11 @@ async function main_loop() {
   out.end()
   process.exit(0)
   break;
+      }
+
+      case 'u': {
+        await recurring.recurring(db)
+        break;
       }
 
       case 'i': {
@@ -466,7 +470,7 @@ async function transfer() {
 
   const asset = await select({
     message: 'Where did you it transfer to?',
-    options: config.asset_accounts,
+    options: config.asset_accounts.concat(config.liability_accounts),
   })
 
   const amount = await text({
