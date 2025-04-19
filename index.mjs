@@ -257,78 +257,78 @@ async function main_loop() {
       }
 
       case 'c': {
-  const prev_bal = await text({
-    message: 'What was the previous balance?',
-    placeholder: "1,234.56",
-    validate: (value) => {
-      const num = Number(value)
-      if (isNaN(value) || typeof value === 'undefined') {
-        return 'Please enter a number.'
-      }
-    }
-  })
+        const prev_bal = await text({
+          message: 'What was the previous balance?',
+          placeholder: "1,234.56",
+          validate: (value) => {
+            const num = Number(value)
+            if (isNaN(value) || typeof value === 'undefined') {
+              return 'Please enter a number.'
+            }
+          }
+        })
 
-  if (isCancel(prev_bal)) {
-    cancel('Whoops, OK')
-    quit()
-    process.exit(0)
-  }
+        if (isCancel(prev_bal)) {
+          cancel('Whoops, OK')
+          quit()
+          process.exit(0)
+        }
 
-  const curr_bal = await text({
-    message: 'What is the current balance?',
-    placeholder: "1,234.56",
-    validate: (value) => {
-      const num = Number(value)
-      if (isNaN(value) || typeof value === 'undefined') {
-        return 'Please enter a number.'
-      }
-    }
-  })
-  const min_pay = await text({
-    message: 'What is the minimum payment?',
-    placeholder: "123.45",
-    validate: (value) => {
-      const num = Number(value)
-      if (isNaN(value) || typeof value === 'undefined') {
-        return 'Please enter a number.'
-      }
-    }
-  })
-  const due = await text({
-    message: 'When is the minimum payment due?',
-    placeholder: "1970-01-01",
-    /*validate: (value) => {
-      const num = Number(value)
-      if (isNaN(num) || typeof value === 'undefined') {
-        return 'Please enter a number.'
-      }
-    }*/
-  })
-  break
+        const curr_bal = await text({
+          message: 'What is the current balance?',
+          placeholder: "1,234.56",
+          validate: (value) => {
+            const num = Number(value)
+            if (isNaN(value) || typeof value === 'undefined') {
+              return 'Please enter a number.'
+            }
+          }
+        })
+        const min_pay = await text({
+          message: 'What is the minimum payment?',
+          placeholder: "123.45",
+          validate: (value) => {
+            const num = Number(value)
+            if (isNaN(value) || typeof value === 'undefined') {
+              return 'Please enter a number.'
+            }
+          }
+        })
+        const due = await text({
+          message: 'When is the minimum payment due?',
+          placeholder: "1970-01-01",
+          /*validate: (value) => {
+            const num = Number(value)
+            if (isNaN(num) || typeof value === 'undefined') {
+              return 'Please enter a number.'
+            }
+          }*/
+        })
+        break
       }
 
       case 'p': {
-  note('Mark transactions as posted or not.')
-  for await (const tx of db.transactions) {
-     const value = await selectKey({
-      message: `${tx.isPosted ? 'POSTED' : ''} ${tx.date} - ${tx.payee} - ${tx.debit} ?`,
-      options: [
-        { key: 'p', value: 'p', label: 'Posted' },
-        { key: 'n', value: 'n', label: 'Not Posted' }
-      ],
-    })
-    if (isCancel(value)) {
-      cancel('Ok, leaving for now')
-      break
-    }
-    tx.isPosted = value === 'p'
-  }
+        note('Mark transactions as posted or not.')
+        for await (const tx of db.transactions) {
+           const value = await selectKey({
+            message: `${tx.isPosted ? 'POSTED' : ''} ${tx.date} - ${tx.payee} - ${tx.debit} ?`,
+            options: [
+              { key: 'p', value: 'p', label: 'Posted' },
+              { key: 'n', value: 'n', label: 'Not Posted' }
+            ],
+          })
+          if (isCancel(value)) {
+            cancel('Ok, leaving for now')
+            break
+          }
+          tx.isPosted = value === 'p'
+        }
 
-  quit()
-  outro(`You're all set!`);
-  out.end()
-  process.exit(0)
-  break;
+        quit()
+        outro(`You're all set!`);
+        out.end()
+        process.exit(0)
+        break;
       }
 
       case 'u': {
