@@ -49,8 +49,10 @@ const a2tx = (tx) => {
   const credit_string = String(Number(tx.amount).toFixed(2)).padStart(config.amount_padding - tx.credit.length, ' ')
   const debit_string =  String(     (-tx.amount).toFixed(2)).padStart(config.amount_padding - tx.debit.length,  ' ')
   const recurring_string = tx.recurring_frequency ? `  ${tx.recurring_frequency}\n` : ''
+  const ruuid_string = tx.ruuid ? `  ; :ruuid: ${tx.ruuid}\n` : ''
   return `${tx.date} ${tx.isPosted ? '*' : ' '} ${tx.payee}\n` +
     recurring_string +
+    ruuid_string +
     `  ${tx.credit}${credit_string} CAD\n` +
     `  ${tx.debit}${debit_string} CAD\n`
 }
@@ -194,6 +196,7 @@ async function main_loop() {
     })
 
     let recurring_frequency = false
+    let ruuid = undefined
     if (recurring === 'y') {
       const frequency = await selectKey({
         message: 'How often is it recurring?',
@@ -213,13 +216,16 @@ async function main_loop() {
         a: 'annually',
       }
       recurring_frequency = `; :recurring: ${value_map[frequency]}`
+      ruuid = rypto.randomUUID()
       db.recurring.push({
-        start_date: date, date, payee, amount, credit: expense_cat, debit: debit_cat, frequency
+        start_date: date, date, payee, amount, credit: expense_cat,
+        debit: debit_cat, frequency, ruuid
       })
     }
 
     db.transactions.push({
-      date, payee, amount, credit: expense_cat, debit: debit_cat, recurring_frequency
+      date, payee, amount, credit: expense_cat, debit: debit_cat,
+      recurring_frequency, ruuid
     })
 
     const credit_string = String(amount).padStart(56 - expense_cat.length, ' ')
