@@ -11,7 +11,6 @@
 // TODO use event-sourcing model to simplify the representation,
 //      reconciliation, and input of transactions and posting events
 // TODO fireproof-storage for the log of transactions?
-// TODO list of recurring expenses, ask to add them
 // TODO workflow to create list of accounts
 // TODO edit transactions
 // TODO support splitting TX e.g. costco or amazon
@@ -125,6 +124,7 @@ async function main_loop() {
         process.exit(0)
 
       case 't':
+        // TODO what about a refund of medical expenses?
         await transfer()
         break;
 

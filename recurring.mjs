@@ -1,13 +1,27 @@
 import { cancel, isCancel, note, selectKey, text } from '@clack/prompts';
 
+const rmap = {
+  m: '; :recurring: monthly',
+  b: '; :recurring: bi-weekly',
+  w: '; :recurring: weekly',
+}
+const rmap_human = {
+  m: 'monthly',
+  b: 'bi-weekly',
+  w: 'weekly',
+}
+
+
 const recurring = async (db) => {
-  const task = await  selectKey({
+  const task = await selectKey({
     message: 'What do you want to do?',
     options: [
-      { key: '_', value: '_', label: 'I\'m not sure what to do...', hint: 'We can help!' },
       { key: 'v', value: 'v', label: 'View recurring transactions' },
+      // will fill up transactions between the start date and last dated txns in
+      // the ledger, so to extend recurring txns into the future, add more
+      // non-recurring
       { key: 'r', value: 'r', label: 'Reconcile transactions' }, // e.g. modify date due to holiday/weekend
-      { key: 'e', value: 'e', label: 'Extend recurrences into the future' },
+      { key: 'e', value: 'e', label: 'Extend recurrences into the future' }, // TODO, maybe unnecessary?
       { key: 'q', value: 'q', label: 'Go back' },
     ],
   });
@@ -20,12 +34,13 @@ const recurring = async (db) => {
   switch (task) {
     case 'v':
       {
-        // TODO move recurring TX into their own array in the ledger, which will also
-        // work as a Set of recurring tx with no repeats
-        //const a = new Set()
+        let message = ''
         for await (const tx of db.recurring) {
-          note(`Recurring every '${tx.frequency}': ${tx.payee} ${tx.credit} ${tx.amount}`)
+          const amount = ('$'+String(Number(tx.amount).toFixed(2))).padStart(8, ' ')
+          const r = rmap_human[tx.frequency].padStart(9, ' ')
+          message += `Recurring ${amount}, ${r}: ${tx.payee} ${tx.credit} \n`
         }
+        note(message)
         break
       }
 
@@ -62,11 +77,6 @@ const recurring = async (db) => {
             // can safely walk them in this order
             for await (const t of db.transactions) {
               if (t.date > target) {
-                const rmap = {
-                  m: '; :recurring: monthly',
-                  b: '; :recurring: bi-weekly',
-                  w: '; :recurring: weekly',
-                }
                 const new_tx = {
                   ...rtx,
                   recurring_frequency: rmap[rtx.frequency],
