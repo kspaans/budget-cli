@@ -2,11 +2,11 @@
 // - [ ] pressing enter instead of `e` to enter an expense crashes
 // - [ ] screen needs to be large enough to list all expense categories,
 //   need autocomplete!
-// - [ ] `new Date()` is in UTC
 // - [ ] better date validation
 // - [ ] can't use true/false in selectKey()?
 
 // TODO autocomplete (needs inquirer)
+// TODO CC creation (billing dates, credit, maybe reoncile bills)
 // TODO track CC available-credit
 // TODO use event-sourcing model to simplify the representation,
 //      reconciliation, and input of transactions and posting events
@@ -23,6 +23,7 @@ import fs from 'node:fs'
 import { setTimeout } from 'node:timers/promises'
 
 import recurring from './recurring.mjs'
+import posted from './posted.mjs'
 
 /**
  * {
@@ -45,8 +46,10 @@ const config = {
 const tasks = []
 
 const a2tx = (tx) => {
-  const credit_string = String(Number(tx.amount).toFixed(2)).padStart(config.amount_padding - tx.credit.length, ' ')
-  const debit_string =  String(     (-tx.amount).toFixed(2)).padStart(config.amount_padding - tx.debit.length,  ' ')
+  const credit_string = String(Number(tx.amount).toFixed(2))
+    .padStart(config.amount_padding - tx.credit.length, ' ')
+  const debit_string =  String(     (-tx.amount).toFixed(2))
+    .padStart(config.amount_padding - tx.debit.length,  ' ')
   const recurring_string = tx.recurring_frequency ? `  ${tx.recurring_frequency}\n` : ''
   const ruuid_string = tx.ruuid ? `  ; :ruuid: ${tx.ruuid}\n` : ''
   return `${tx.date} ${tx.isPosted ? '*' : ' '} ${tx.payee}\n` +
@@ -132,8 +135,8 @@ async function main_loop() {
   while (true) {
     const date = await text({
       message: 'When did/will the expense occur?',
-      placeholder: (new Date()).toISOString().split('T')[0],
-      initialValue: (new Date()).toISOString().split('T')[0],
+      placeholder: (new Date()).toLocaleDateString(),
+      initialValue: (new Date()).toLocaleDateString(),
       validate: (d) => {
         if (typeof d === 'undefined' || d === '') {
           return 'Please enter a date.'
@@ -314,26 +317,7 @@ async function main_loop() {
       }
 
       case 'p': {
-        note('Mark transactions as posted or not.')
-        for await (const tx of db.transactions) {
-           const value = await selectKey({
-            message: `${tx.isPosted ? 'POSTED' : ''} ${tx.date} - ${tx.payee} - ${tx.debit} ?`,
-            options: [
-              { key: 'p', value: 'p', label: 'Posted' },
-              { key: 'n', value: 'n', label: 'Not Posted' }
-            ],
-          })
-          if (isCancel(value)) {
-            cancel('Ok, leaving for now')
-            break
-          }
-          tx.isPosted = value === 'p'
-        }
-
-        quit()
-        outro(`You're all set!`);
-        out.end()
-        process.exit(0)
+        await posted.posted(db)
         break;
       }
 
@@ -345,8 +329,8 @@ async function main_loop() {
       case 'i': {
         const date = await text({
           message: 'When did the income occur?',
-          placeholder: (new Date()).toISOString().split('T')[0],
-          initialValue: (new Date()).toISOString().split('T')[0],
+          placeholder: (new Date()).toLocaleDateString(),
+          initialValue: (new Date()).toLocaleDateString(),
           validate: (d) => {
             if (typeof d === 'undefined' || d === '') {
               return 'Please enter a date.'
@@ -415,8 +399,8 @@ async function main_loop() {
 
         const date = await text({
           message: 'When did the expense occur?',
-          placeholder: (new Date()).toISOString().split('T')[0],
-          initialValue: (new Date()).toISOString().split('T')[0],
+          placeholder: (new Date()).toLocaleDateString(),
+          initialValue: (new Date()).toLocaleDateString(),
           validate: (d) => {
             if (typeof d === 'undefined' || d === '') {
               return 'Please enter a date.'
@@ -461,8 +445,8 @@ async function transfer() {
 
   const date = await text({
     message: 'When did the transfer occur?',
-    placeholder: (new Date()).toISOString().split('T')[0],
-    initialValue: (new Date()).toISOString().split('T')[0],
+    placeholder: (new Date()).toLocaleDateString(),
+    initialValue: (new Date()).toLocaleDateString(),
     validate: (d) => {
       if (typeof d === 'undefined' || d === '') {
         return 'Please enter a date.'

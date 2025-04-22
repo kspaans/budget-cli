@@ -11,7 +11,6 @@ const rmap_human = {
   w: 'weekly',
 }
 
-
 const recurring = async (db) => {
   const task = await selectKey({
     message: 'What do you want to do?',
@@ -91,15 +90,15 @@ const recurring = async (db) => {
                 switch (rtx.frequency) {
                   case 'm':
                     tdate.setMonth(tdate.getMonth() + 1)
-                    target = `${tdate.toISOString().split('T')[0]}`
+                    target = `${tdate.toLocaleDateString()}`
                     break;
                   case 'b':
                     tdate.setDate(tdate.getDate() + 14)
-                    target = `${tdate.toISOString().split('T')[0]}`
+                    target = `${tdate.toLocaleDateString()}`
                     break;
                   case 'w':
                     tdate.setDate(tdate.getDate() + 7)
-                    target = `${tdate.toISOString().split('T')[0]}`
+                    target = `${tdate.toLocaleDateString()}`
                     break;
                   default:
                     note('WHOOPS do not have a plan for that recurring value yet!')
