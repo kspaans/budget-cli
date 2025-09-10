@@ -32,7 +32,12 @@ import posted from './posted.mjs'
  *   ... 
  * }
  */
-import db from './.ledger.json' with { 'type': 'json' }
+let db = undefined
+try {
+  db = await import('./.ledger.json', {with: { 'type': 'json' }})
+} catch {
+  throw new Error(`ERROR: \`.ledger.json\` file missing, please create it before starting`)
+}
 
 let data
 const config = {
