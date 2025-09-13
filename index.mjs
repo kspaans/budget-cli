@@ -1,4 +1,8 @@
 // BUGS
+// - [ ] better init experience of fresh .ledger.json
+//   - [ ] message saying a new file is created
+//   - [ ] pre-populate the properties (txs, recurring, ...)
+//   - [X] dynamic import of JSON with error message
 // - [ ] pressing enter instead of `e` to enter an expense crashes
 // - [ ] screen needs to be large enough to list all expense categories,
 //   need autocomplete!
@@ -38,6 +42,9 @@ try {
 } catch {
   throw new Error(`ERROR: \`.ledger.json\` file missing, please create it before starting`)
 }
+
+// the dynamic import has different naming
+db = db.default
 
 let data
 const config = {
@@ -113,6 +120,7 @@ async function main_loop() {
       options: [
         { key: '_', value: '_', label: 'I\'m not sure what to do...', hint: 'We can help!' },
         { key: 'e', value: 'e', label: 'Enter an expense', hint: 'e' },
+        { key: 'l', value: 'l', label: 'Loan someone money', hint: 'l' },
         { key: 'r', value: 'r', label: 'Reconcile CSV' },
         { key: 'c', value: 'c', label: 'Credit Card Statement' },
         { key: 'u', value: 'u', label: 'stuff Recurring Transactions stuff...' },
@@ -224,7 +232,7 @@ async function main_loop() {
         a: 'annually',
       }
       recurring_frequency = `; :recurring: ${value_map[frequency]}`
-      ruuid = rypto.randomUUID()
+      ruuid = crypto.randomUUID()
       db.recurring.push({
         start_date: date, date, payee, amount, credit: expense_cat,
         debit: debit_cat, frequency, ruuid
@@ -267,6 +275,79 @@ async function main_loop() {
   outro(`You're all set!`);
   out.end()
   process.exit(0)
+        break
+      }
+
+      case 'l': {
+        const date = await text({
+          message: 'When did/will the loan occur?',
+          placeholder: (new Date()).toLocaleDateString(),
+          initialValue: (new Date()).toLocaleDateString(),
+          validate: (d) => {
+            if (typeof d === 'undefined' || d === '') {
+              return 'Please enter a date.'
+            }
+            const result = Date.parse(d)
+            if (isNaN(result) || result === 'Invalid Date') {
+              return 'Please enter a valid date in YYYY-MM-DD format.'
+            }
+          }
+        })
+
+        if (isCancel(date)) {
+          cancel('Whoops, OK')
+          break
+        }
+
+        const amount = await text({
+          message: 'OK, what\'s the amount?',
+          placeholder: "12.34",
+          validate: (value) => {
+            const num = Number(value)
+            if (isNaN(value) || typeof value === 'undefined' || value === '') {
+              return 'Please enter a number.'
+            }
+          }
+        })
+
+        // TODO: use `select()` with a pre-defined or dynamic list
+        const loanee = await text({
+          message: `Who is the loan to?`,
+        })
+
+        let debit_cat = await select({
+          message: 'Debit from where?',
+          options: config.asset_accounts.concat({ value: 'CC', label: 'Credit Card' }),
+        })
+
+        if (debit_cat === 'CC') {
+          debit_cat =  await select({
+            message: 'Which card?',
+            options: config.liability_accounts,
+          })
+        }
+
+        const payee = loanee
+        const expense_cat = `Liabilities:${loanee}`
+        db.transactions.push({
+          date, payee, amount, credit: expense_cat, debit: debit_cat
+        })
+
+        const credit_string = String(amount).padStart(56 - expense_cat.length, ' ')
+        const debit_string = String(-amount).padStart(56 - debit_cat.length, ' ')
+        const tx = `${date}   ${payee}\n` +
+          `  ${expense_cat}${credit_string} CAD\n` +
+          `  ${debit_cat}${debit_string} CAD\n`
+        note(tx, 'Ledger Entry:')
+        out.write(tx)
+        out.write('\n')
+
+        if (isCancel(expense_cat)) {
+          cancel('Ok, leaving for now')
+          out.end()
+          process.exit(0)
+        }
+
         break
       }
 
