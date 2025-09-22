@@ -28,6 +28,7 @@ import { setTimeout } from 'node:timers/promises'
 
 import recurring from './recurring.mjs'
 import posted from './posted.mjs'
+import web from './web.mjs'
 
 /**
  * {
@@ -113,6 +114,8 @@ const quit = () => {
 }
 
 async function main_loop() {
+  note(`Runnign website check out http://localhost:8888/`)
+  const w = await web.server(db.transactions)
   while (true) {
     const projectType = await selectKey({ // maybe try `select()` instead so enter works?
       message: 'What do you want to do?',
