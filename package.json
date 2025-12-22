@@ -1,6 +1,6 @@
 {
   "engines": {
-    "node": ">=22"
+    "node": ">=25"
   },
   "dependencies": {
     "@clack/prompts": "1.0.0-alpha.4"
