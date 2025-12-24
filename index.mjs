@@ -24,11 +24,39 @@
 
 import { intro, cancel, isCancel, log, note, outro, select, selectKey, text } from '@clack/prompts';
 import fs from 'node:fs'
+import sqlite from 'node:sqlite'
 import { setTimeout } from 'node:timers/promises'
 
 import recurring from './recurring.mjs'
 import posted from './posted.mjs'
 import web from './web.mjs'
+
+const database = new sqlite.DatabaseSync('./.ledger.db')
+console.log('running db init' +
+database.exec(`
+  CREATE TABLE IF NOT EXISTS transactions(
+      tx_id INTEGER PRIMARY KEY AUTOINCREMENT
+    , tx_date TEXT
+    , tx_payee TEXT
+    , tx_credit TEXT
+    , tx_debit TEXT
+    , tx_amount INTEGER
+    , tx_posted BOOLEAN
+  )
+`)
+)
+console.log(`there are ${database.prepare('SELECT COUNT(tx_id) FROM transactions').all().length} rows in the DB currently`)
+const insert_tx = database.prepare(`
+  INSERT INTO transactions(
+      tx_date
+    , tx_payee
+    , tx_credit
+    , tx_debit
+    , tx_amount
+    , tx_posted
+  )
+  VALUES (?,?,?,?,?,?)
+`)
 
 /**
  * {
@@ -246,6 +274,8 @@ async function main_loop() {
       date, payee, amount, credit: expense_cat, debit: debit_cat,
       recurring_frequency, ruuid
     })
+    // boolean is an INT, so must be 0/1
+    insert_tx.run(date, payee, expense_cat, debit_cat, amount, 0)
 
     const credit_string = String(amount).padStart(56 - expense_cat.length, ' ')
     const debit_string = String(-amount).padStart(56 - debit_cat.length, ' ')
