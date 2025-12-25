@@ -34,6 +34,7 @@ import web from './web.mjs'
 const database = new sqlite.DatabaseSync('./.ledger.db')
 console.log('running db init' +
 database.exec(`
+  PRAGMA foreign_keys = ON;
   CREATE TABLE IF NOT EXISTS transactions(
       tx_id INTEGER PRIMARY KEY AUTOINCREMENT
     , tx_date TEXT
@@ -42,9 +43,26 @@ database.exec(`
     , tx_debit TEXT
     , tx_amount INTEGER
     , tx_posted BOOLEAN
+  );
+  CREATE TABLE IF NOT EXISTS recurring(
+      rx_id INTEGER PRIMARY KEY AUTOINCREMENT
+    , rx_start_date TEXT
+    , rx_date TEXT
+    , rx_payee TEXT
+    , rx_credit TEXT
+    , rx_debit TEXT
+    , rx_frequency TEXT
+    , rx_amount INTEGER
+    , rx_uuid TEXT
+  );
+  CREATE TABLE IF NOT EXISTS recurring_transactions(
+      rtx_id INTEGER PRIMARY KEY AUTOINCREMENT
+    , tx_id INTEGER REFERENCES transactions(tx_id)
+    , rx_id INTEGER REFERENCES recurring(rx_id)
   )
 `)
 )
+
 console.log(`there are ${database.prepare('SELECT COUNT(tx_id) FROM transactions').all().length} rows in the DB currently`)
 const insert_tx = database.prepare(`
   INSERT INTO transactions(
@@ -56,6 +74,20 @@ const insert_tx = database.prepare(`
     , tx_posted
   )
   VALUES (?,?,?,?,?,?)
+`)
+
+const insert_recurring = database.prepare(`
+  INSERT INTO recurring(
+      rx_start_date
+    , rx_date
+    , rx_payee
+    , rx_amount
+    , rx_credit
+    , rx_debit
+    , rx_frequency
+    , rx_uuid
+  )
+  VALUES (?,?,?,?,?,?,?,?)
 `)
 
 /**
@@ -126,6 +158,7 @@ const out = fs.createWriteStream('./expenses.dat')
   });
 
 const quit = () => {
+  database.close()
   fs.writeFileSync('.ledger.json', JSON.stringify({
       transactions: db.transactions.sort((a,b) => ((a.date < b.date) ? -1 : 1)),
       ...db
@@ -268,14 +301,14 @@ async function main_loop() {
         start_date: date, date, payee, amount, credit: expense_cat,
         debit: debit_cat, frequency, ruuid
       })
+      insert_recurring(date, date, payee, amount, expense_cat, debit_cat, frequency, ruuid)
     }
 
     db.transactions.push({
       date, payee, amount, credit: expense_cat, debit: debit_cat,
       recurring_frequency, ruuid
     })
-    // boolean is an INT, so must be 0/1
-    insert_tx.run(date, payee, expense_cat, debit_cat, amount, 0)
+    insert_tx.run(date, payee, expense_cat, debit_cat, amount, recurring_frequency, ruuid, 0)
 
     const credit_string = String(amount).padStart(56 - expense_cat.length, ' ')
     const debit_string = String(-amount).padStart(56 - debit_cat.length, ' ')
@@ -287,8 +320,8 @@ async function main_loop() {
     out.write('\n')
 
     if (isCancel(expense_cat)) {
-
       cancel('Ok, leaving for now')
+      database.close()
       out.end()
       process.exit(0)
     }
@@ -306,6 +339,7 @@ async function main_loop() {
     }
   }
   outro(`You're all set!`);
+  database.close()
   out.end()
   process.exit(0)
         break
@@ -377,6 +411,7 @@ async function main_loop() {
 
         if (isCancel(expense_cat)) {
           cancel('Ok, leaving for now')
+          database.close()
           out.end()
           process.exit(0)
         }
@@ -517,7 +552,7 @@ async function main_loop() {
         const debit_cat = 'Equity:Opening Balances'
 
         const date = await text({
-          message: 'When did the expense occur?',
+          message: 'When did the account open occur?',
           placeholder: (new Date()).toLocaleDateString(),
           initialValue: (new Date()).toLocaleDateString(),
           validate: (d) => {
@@ -550,6 +585,7 @@ async function main_loop() {
         db.transactions.push({
           date, payee, amount, credit: asset, debit: debit_cat
         })
+        insert_tx.run(date, payee, asset, debit_cat, amount, 1)
 
 
         quit()
