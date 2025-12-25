@@ -74,6 +74,7 @@ const insert_tx = database.prepare(`
     , tx_posted
   )
   VALUES (?,?,?,?,?,?)
+  RETURNING tx_id
 `)
 
 const insert_recurring = database.prepare(`
@@ -88,6 +89,15 @@ const insert_recurring = database.prepare(`
     , rx_uuid
   )
   VALUES (?,?,?,?,?,?,?,?)
+  RETURNING rx_id
+`)
+
+const insert_rtx = database.prepare(`
+  INSERT INTO recurring_transactions(
+      rx_id
+    , tx_id
+  )
+  VALUES (?,?)
 `)
 
 /**
@@ -158,7 +168,6 @@ const out = fs.createWriteStream('./expenses.dat')
   });
 
 const quit = () => {
-  database.close()
   fs.writeFileSync('.ledger.json', JSON.stringify({
       transactions: db.transactions.sort((a,b) => ((a.date < b.date) ? -1 : 1)),
       ...db
@@ -301,14 +310,21 @@ async function main_loop() {
         start_date: date, date, payee, amount, credit: expense_cat,
         debit: debit_cat, frequency, ruuid
       })
-      insert_recurring(date, date, payee, amount, expense_cat, debit_cat, frequency, ruuid)
+      database.exec(`BEGIN TRANSACTION`)
+      // TODO convert amount to an integer
+      const rx_id = insert_recurring.run(date, date, payee, amount, expense_cat, debit_cat, frequency, ruuid)
+      const tx_id = insert_tx.run(date, payee, expense_cat, debit_cat, amount, 0)
+      insert_rtx.run(rx_id.lastInsertRowid, tx_id.lastInsertRowid)
+      database.exec(`COMMIT`)
+    } else {
+      // TODO make the tx and rtx insert idempotent
+      insert_tx.run(date, payee, expense_cat, debit_cat, amount, 0)
     }
 
     db.transactions.push({
       date, payee, amount, credit: expense_cat, debit: debit_cat,
       recurring_frequency, ruuid
     })
-    insert_tx.run(date, payee, expense_cat, debit_cat, amount, recurring_frequency, ruuid, 0)
 
     const credit_string = String(amount).padStart(56 - expense_cat.length, ' ')
     const debit_string = String(-amount).padStart(56 - debit_cat.length, ' ')
@@ -321,7 +337,6 @@ async function main_loop() {
 
     if (isCancel(expense_cat)) {
       cancel('Ok, leaving for now')
-      database.close()
       out.end()
       process.exit(0)
     }
@@ -339,7 +354,6 @@ async function main_loop() {
     }
   }
   outro(`You're all set!`);
-  database.close()
   out.end()
   process.exit(0)
         break
@@ -411,7 +425,6 @@ async function main_loop() {
 
         if (isCancel(expense_cat)) {
           cancel('Ok, leaving for now')
-          database.close()
           out.end()
           process.exit(0)
         }
@@ -585,6 +598,7 @@ async function main_loop() {
         db.transactions.push({
           date, payee, amount, credit: asset, debit: debit_cat
         })
+        // TODO convert amount to an integer
         insert_tx.run(date, payee, asset, debit_cat, amount, 1)
 
 
