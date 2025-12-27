@@ -24,98 +24,13 @@
 
 import { intro, cancel, isCancel, log, note, outro, select, selectKey, text } from '@clack/prompts';
 import fs from 'node:fs'
-import sqlite from 'node:sqlite'
 import { setTimeout } from 'node:timers/promises'
 
-import recurring from './recurring.mjs'
+import db from './db.mjs'
+import expenses from './expense.mjs'
 import posted from './posted.mjs'
+import recurring from './recurring.mjs'
 import web from './web.mjs'
-
-const database = new sqlite.DatabaseSync('./.ledger.db')
-console.log('running db init' +
-database.exec(`
-  PRAGMA foreign_keys = ON;
-  CREATE TABLE IF NOT EXISTS transactions(
-      tx_id INTEGER PRIMARY KEY AUTOINCREMENT
-    , tx_date TEXT
-    , tx_payee TEXT
-    , tx_credit TEXT
-    , tx_debit TEXT
-    , tx_amount INTEGER
-    , tx_posted BOOLEAN
-  );
-  CREATE TABLE IF NOT EXISTS recurring(
-      rx_id INTEGER PRIMARY KEY AUTOINCREMENT
-    , rx_start_date TEXT
-    , rx_date TEXT
-    , rx_payee TEXT
-    , rx_credit TEXT
-    , rx_debit TEXT
-    , rx_frequency TEXT
-    , rx_amount INTEGER
-    , rx_uuid TEXT
-  );
-  CREATE TABLE IF NOT EXISTS recurring_transactions(
-      rtx_id INTEGER PRIMARY KEY AUTOINCREMENT
-    , tx_id INTEGER REFERENCES transactions(tx_id)
-    , rx_id INTEGER REFERENCES recurring(rx_id)
-  )
-`)
-)
-
-console.log(`there are ${database.prepare('SELECT COUNT(tx_id) FROM transactions').all().length} rows in the DB currently`)
-const insert_tx = database.prepare(`
-  INSERT INTO transactions(
-      tx_date
-    , tx_payee
-    , tx_credit
-    , tx_debit
-    , tx_amount
-    , tx_posted
-  )
-  VALUES (?,?,?,?,?,?)
-  RETURNING tx_id
-`)
-
-const insert_recurring = database.prepare(`
-  INSERT INTO recurring(
-      rx_start_date
-    , rx_date
-    , rx_payee
-    , rx_amount
-    , rx_credit
-    , rx_debit
-    , rx_frequency
-    , rx_uuid
-  )
-  VALUES (?,?,?,?,?,?,?,?)
-  RETURNING rx_id
-`)
-
-const insert_rtx = database.prepare(`
-  INSERT INTO recurring_transactions(
-      rx_id
-    , tx_id
-  )
-  VALUES (?,?)
-`)
-
-/**
- * {
- *   transactions: [ {amount:1, account:"a", isPosted:true}, ...],
- *   recurring: [ {start_date:'2000-01-02', frequency:'biweekly'}, ...]
- *   ... 
- * }
- */
-let db = undefined
-try {
-  db = await import('./.ledger.json', {with: { 'type': 'json' }})
-} catch {
-  throw new Error(`ERROR: \`.ledger.json\` file missing, please create it before starting`)
-}
-
-// the dynamic import has different naming
-db = db.default
 
 let data
 const config = {
@@ -144,6 +59,8 @@ const a2tx = (tx) => {
 
 intro(`LEDGER INTERACTIVE ACCOUNTING`);
 
+db.db.init_db(note)
+
 try {
   data = fs.readFileSync('./.accounts.json', { encoding: 'utf8' })
   const accounts = JSON.parse(data)
@@ -168,24 +85,20 @@ const out = fs.createWriteStream('./expenses.dat')
   });
 
 const quit = () => {
-  fs.writeFileSync('.ledger.json', JSON.stringify({
-      transactions: db.transactions.sort((a,b) => ((a.date < b.date) ? -1 : 1)),
-      ...db
-    },
-    null,
-    '  '
-  ))
+  // TODO fix Ledger output
+  /*
   fs.writeFileSync('2budget.dat',
     db.transactions
       .sort((a,b) => ((a.date < b.date) ? -1 : 1))
       .map(a2tx)
       .join('\n')
   )
+  */
 }
 
 async function main_loop() {
   note(`Runnign website check out http://localhost:8888/`)
-  const w = await web.server(db.transactions)
+  const w = await web.server(db.db.transactions)
   while (true) {
     const projectType = await selectKey({ // maybe try `select()` instead so enter works?
       message: 'What do you want to do?',
@@ -215,147 +128,10 @@ async function main_loop() {
       case 't':
         // TODO what about a refund of medical expenses?
         await transfer()
-        break;
+        break
 
       case 'e': {
-  while (true) {
-    const date = await text({
-      message: 'When did/will the expense occur?',
-      placeholder: (new Date()).toLocaleDateString(),
-      initialValue: (new Date()).toLocaleDateString(),
-      validate: (d) => {
-        if (typeof d === 'undefined' || d === '') {
-          return 'Please enter a date.'
-        }
-        const result = Date.parse(d)
-        if (isNaN(result) || result === 'Invalid Date') {
-          return 'Please enter a valid date in YYYY-MM-DD format.'
-        }
-      }
-    })
-
-    if (isCancel(date)) {
-      cancel('Whoops, OK')
-      break
-    }
-
-    const amount = await text({
-      message: 'OK, what\'s the amount?',
-      placeholder: "12.34",
-      validate: (value) => {
-        const num = Number(value)
-        if (isNaN(value) || typeof value === 'undefined' || value === '') {
-          return 'Please enter a number.'
-        }
-      }
-    })
-    const expense_cat = await select({
-      message: `How should this be categorized?`,
-      options: config.expense_accounts
-    })
-
-    let debit_cat = await select({
-        message: 'Debit from where?',
-        options: config.asset_accounts.concat({ value: 'CC', label: 'Credit Card' }),
-      })
-
-    if (debit_cat === 'CC') {
-      debit_cat =  await select({
-        message: 'Which card?',
-        options: config.liability_accounts,
-      })
-    }
-
-    const payee = await text({
-      message: 'Payee?',
-      placeholder: "Bob's Burgers",
-      validate: (value) => {
-        if (value.length === 0) {
-          return 'Please enter a payee name.'
-        }
-      }
-    })
-
-    const recurring = await select({
-      message: 'Is it recurring?',
-      options: [
-        { value: 'y', label: 'Yes' },
-        { value: 'n', label: 'No' },
-      ],
-    })
-
-    let recurring_frequency = false
-    let ruuid = undefined
-    if (recurring === 'y') {
-      const frequency = await selectKey({
-        message: 'How often is it recurring?',
-        options: [
-          { key: 'w', value: 'w', label: 'Weekly' },
-          { key: 'b', value: 'b', label: 'Bi-Weekly (every two weeks)' },
-          { key: 't', value: 't', label: 'Bi-Monthly (twice a month)' },
-          { key: 'm', value: 'm', label: 'Monthly' },
-          { key: 'a', value: 'a', label: 'Annually' },
-        ]
-      })
-      const value_map = {
-        w: 'weekly',
-        b: 'bi-weekly',
-        t: 'bi-monthly',
-        m: 'monthly',
-        a: 'annually',
-      }
-      recurring_frequency = `; :recurring: ${value_map[frequency]}`
-      ruuid = crypto.randomUUID()
-      db.recurring.push({
-        start_date: date, date, payee, amount, credit: expense_cat,
-        debit: debit_cat, frequency, ruuid
-      })
-      database.exec(`BEGIN TRANSACTION`)
-      // TODO convert amount to an integer
-      const rx_id = insert_recurring.run(date, date, payee, amount, expense_cat, debit_cat, frequency, ruuid)
-      const tx_id = insert_tx.run(date, payee, expense_cat, debit_cat, amount, 0)
-      insert_rtx.run(rx_id.lastInsertRowid, tx_id.lastInsertRowid)
-      database.exec(`COMMIT`)
-    } else {
-      // TODO make the tx and rtx insert idempotent
-      insert_tx.run(date, payee, expense_cat, debit_cat, amount, 0)
-    }
-
-    db.transactions.push({
-      date, payee, amount, credit: expense_cat, debit: debit_cat,
-      recurring_frequency, ruuid
-    })
-
-    const credit_string = String(amount).padStart(56 - expense_cat.length, ' ')
-    const debit_string = String(-amount).padStart(56 - debit_cat.length, ' ')
-    const tx = `${date}   ${payee}\n` +
-      `  ${expense_cat}${credit_string} CAD\n` +
-      `  ${debit_cat}${debit_string} CAD\n`
-    note(tx, 'Ledger Entry:')
-    out.write(tx)
-    out.write('\n')
-
-    if (isCancel(expense_cat)) {
-      cancel('Ok, leaving for now')
-      out.end()
-      process.exit(0)
-    }
-
-    const projectType = await select({
-      message: 'What do you want to do next?',
-      options: [
-        { value: 'e', label: 'Enter another expense' },
-        { value: 'q', label: 'Exit', hint: 'niiiiice work' },
-      ],
-    });
-    if (projectType === 'q') {
-      quit()
-      break
-    }
-  }
-  outro(`You're all set!`);
-  out.end()
-  process.exit(0)
+        await expenses(database, out)
         break
       }
 
@@ -410,9 +186,7 @@ async function main_loop() {
 
         const payee = loanee
         const expense_cat = `Liabilities:${loanee}`
-        db.transactions.push({
-          date, payee, amount, credit: expense_cat, debit: debit_cat
-        })
+        db.db.insert_tx(date, payee, expense_cat, debit_cat, amount, 1)
 
         const credit_string = String(amount).padStart(56 - expense_cat.length, ' ')
         const debit_string = String(-amount).padStart(56 - debit_cat.length, ' ')
@@ -484,12 +258,13 @@ async function main_loop() {
       }
 
       case 'p': {
-        await posted.posted(db)
+        await posted.posted(db.db)
         break;
       }
 
       case 'u': {
-        await recurring.recurring(db)
+        // TODO use sqlite
+        await recurring.recurring(db.db)
         break;
       }
 
@@ -546,9 +321,7 @@ async function main_loop() {
           }
         })
 
-        db.transactions.push({
-          date, payee, amount, credit: credit_cat, debit: income_cat
-        })
+        db.db.insert_tx(date, payee, credit_cat, income_cat, amount, 0)
 
         if (isCancel(income_cat)) {
           cancel('Ok, leaving for now')
@@ -595,12 +368,8 @@ async function main_loop() {
           },
         })
 
-        db.transactions.push({
-          date, payee, amount, credit: asset, debit: debit_cat
-        })
         // TODO convert amount to an integer
-        insert_tx.run(date, payee, asset, debit_cat, amount, 1)
-
+        db.db.insert_tx(date, payee, asset, debit_cat, amount, 1)
 
         quit()
         break;
@@ -647,9 +416,7 @@ async function transfer() {
     options: config.asset_accounts,
   })
 
-  db.transactions.push({
-    date, payee, amount, credit: asset, debit
-  })
+  db.db.insert_tx(date, payee, asset, debit, amount, 1)
 }
 
 main_loop()
