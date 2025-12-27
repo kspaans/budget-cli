@@ -16,16 +16,17 @@ const posted = async (db) => {
       }
     }
   })
-  const l = db.transactions.length
+  const txs = db.transactions()
+  const l = txs.length
   let i = 1
-  for await (const tx of db.transactions) {
-    if (tx.date < start) {
+  for (const tx of txs) {
+    if (tx.tx_date < start) {
       i += 1
       continue
     }
 
     const value = await selectKey({
-      message: `(${i}/${l}) ${tx.isPosted ? 'POSTED' : ''} ${tx.date}: $${tx.amount} - ${tx.payee} - ${tx.debit} ?`,
+      message: `(${i}/${l}) ${tx.tx_posted ? 'POSTED' : ''} ${tx.tx_date}: $${tx.tx_amount} - ${tx.tx_payee} - ${tx.tx_debit} ?`,
       options: [
         { key: 'p', value: 'p', label: 'Posted' },
         { key: 'n', value: 'n', label: 'Not Posted' },
@@ -37,6 +38,7 @@ const posted = async (db) => {
       cancel('Ok, leaving for now')
       break
     }
+    // TODO DB query to set TX flag
     tx.isPosted = value === 'p'
     i += 1
   }
