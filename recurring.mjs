@@ -34,10 +34,10 @@ const recurring = async (db) => {
     case 'v':
       {
         let message = ''
-        for await (const tx of db.recurring) {
-          const amount = ('$'+String(Number(tx.amount).toFixed(2))).padStart(8, ' ')
-          const r = rmap_human[tx.frequency].padStart(9, ' ')
-          message += `Recurring ${amount}, ${r}: ${tx.payee} ${tx.credit} \n`
+        for await (const rx of db.recurring()) {
+          const amount = ('$'+String(Number(rx.rx_amount).toFixed(2))).padStart(8, ' ')
+          const r = rmap_human[rx.rx_frequency].padStart(9, ' ')
+          message += `Recurring ${rx.rx_amount}, ${r}: ${rx.rx_payee} ${rx.rx_credit} \n`
         }
         note(message)
         break
@@ -53,10 +53,10 @@ const recurring = async (db) => {
         //   - [ ] modify the date, if necessary (e.g. day falls on weekend or holiday)
         // - [X] if the tx desn't exist in the future, create it
         // - [ ] create more recurring TXs more into the future
-        for await (const rtx of db.recurring) {
+        for await (const rtx of db.recurring()) {
           let create_new_flag = true // TODO better way?
           const value = await selectKey({
-            message: `$${rtx.date} - ${rtx.payee} - ${rtx.debit} ?`,
+            message: `$${rtx.rx_date} - ${rtx.rx_payee} - ${rtx.rx_debit} ?`,
             options: [
               { key: 'y', value: 'y', label: 'Yes' },
               { key: 'n', value: 'n', label: 'No' }
@@ -70,24 +70,25 @@ const recurring = async (db) => {
             continue
           }
           if (value === 'y') {
-            let target = rtx.date
+            let target = rtx.rx_date
             // TODO don't linearly scan the transactions, we know which date to start from
             // the transactions are always saved sorted in date order, so we
             // can safely walk them in this order
-            for await (const t of db.transactions) {
-              if (t.date > target) {
+            for await (const t of db.transactions()) {
+              if (t.tx_date > target) {
+                // TODO have to map between the two sets of columns
                 const new_tx = {
                   ...rtx,
-                  recurring_frequency: rmap[rtx.frequency],
+                  recurring_frequency: rmap[rtx.rx_frequency],
                   date: target,
                 }
-                delete new_tx.start_date
-                delete new_tx.frequency
+                delete new_tx.rx_start_date
+                delete new_tx.rx_frequency
                 if (create_new_flag) {
                   new_txns.push(new_tx)
                 }
                 const tdate = new Date(target)
-                switch (rtx.frequency) {
+                switch (rtx.rx_frequency) {
                   case 'm':
                     tdate.setMonth(tdate.getMonth() + 1)
                     target = `${tdate.toLocaleDateString()}`
@@ -109,7 +110,7 @@ const recurring = async (db) => {
               }
               if (t.ruuid === rtx.ruuid) {
                 const p = await selectKey({
-                  message: `Post/unpost this transaction? $${t.date} - ${t.payee} - ${t.debit} - ${t.isPosted ? '' : 'not'}posted?`,
+                  message: `Post/unpost this transaction? $${t.tx_date} - ${t.tx_payee} - ${t.tx_debit} - ${t.tx_posted ? '' : 'not'}posted?`,
                   options: [
                     { key: 'y', value: 'y', label: 'Yes' },
                     { key: 'n', value: 'n', label: 'No' }
@@ -123,7 +124,8 @@ const recurring = async (db) => {
         }
 
         note(JSON.stringify(new_txns))
-        db.transactions = db.transactions.concat(new_txns)
+        // TODO save new recurring tx
+        //db.transactions = db.transactions.concat(new_txns)
         break
       }
   }

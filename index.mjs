@@ -94,7 +94,7 @@ const quit = () => {
 
 async function main_loop() {
   note(`Runnign website check out http://localhost:8888/`)
-  const w = await web.server(db.db.transactions)
+  const w = await web.server(db.db.transactions())
   while (true) {
     const projectType = await selectKey({ // maybe try `select()` instead so enter works?
       message: 'What do you want to do?',
@@ -259,7 +259,6 @@ async function main_loop() {
       }
 
       case 'u': {
-        // TODO use sqlite
         await recurring.recurring(db.db)
         break;
       }

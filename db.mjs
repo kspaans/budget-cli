@@ -6,6 +6,7 @@ let insert_tx
 let insert_recurring
 let insert_rtx
 let get_transactions_by_date
+let get_recurring
 
 const db = {
   init_db: (note) => {
@@ -83,6 +84,11 @@ const db = {
       FROM transactions
       ORDER BY tx_date ASC
     `)
+
+    get_recurring = database.prepare(`
+      SELECT *
+      FROM recurring
+    `)
   },
 
   exec: (query) => database.exec(query),
@@ -96,6 +102,10 @@ const db = {
   transactions: () => {
     return get_transactions_by_date.all()
   },
+
+  recurring: () => {
+    return get_recurring.all()
+  }
 }
 
 export default {

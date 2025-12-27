@@ -106,18 +106,18 @@ const make_tx_row = (tx, i) => {
     <div style="display: flex;">
       <div class="box">
         <div class="tx_head">
-          <div>${tx.date}</div>
+          <div>${tx.tx_date}</div>
           <div class="posted" id="posted${i}" style="display: none;">*</div>
-          <div>${tx.payee}</div>
+          <div>${tx.tx_payee}</div>
         </div>
         <div class="postings">
           <div class="prow">
-            <div class="account">${tx.credit}</div>
-            <div class="amount">${tx.amount}</div>
+            <div class="account">${tx.tx_credit}</div>
+            <div class="amount">${tx.tx_amount}</div>
           </div>
           <div class="prow debit">
-            <div class="account">${tx.debit}</div>
-            <div class="amount">-${tx.amount}</div>
+            <div class="account">${tx.tx_debit}</div>
+            <div class="amount">-${tx.tx_amount}</div>
           </div>
         </div>
       </div>
