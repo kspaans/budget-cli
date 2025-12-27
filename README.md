@@ -1,11 +1,11 @@
 # Budget Expenses Entry CLI
 
 A tool to help speed up your budgeting and expense entry using the Clack CLI
-framework and Node.js.
+framework, SQLite, and Node.js.
 
 ## Getting Started
 
-To get started, install Node.js v22 or higher. Then run:
+To get started, install Node.js v25 or higher. Then run:
 
 ```
 npm install
@@ -14,7 +14,7 @@ node index.mjs
 ```
 
 Then simply follow the prompts. Expense entry (`e`) is the most thorough. The
-`.ledger.json` file saves your recorded transactions between sessions.
+`.ledger.db` file saves your recorded transactions between sessions.
 
 ### Accounts
 

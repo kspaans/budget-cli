@@ -1,8 +1,4 @@
 // BUGS
-// - [ ] better init experience of fresh .ledger.json
-//   - [ ] message saying a new file is created
-//   - [ ] pre-populate the properties (txs, recurring, ...)
-//   - [X] dynamic import of JSON with error message
 // - [ ] pressing enter instead of `e` to enter an expense crashes
 // - [ ] screen needs to be large enough to list all expense categories,
 //   need autocomplete!
