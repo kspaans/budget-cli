@@ -5,6 +5,7 @@ let database
 let insert_tx
 let insert_recurring
 let insert_rtx
+let get_transactions_by_date
 
 const db = {
   init_db: (note) => {
@@ -76,6 +77,12 @@ const db = {
       )
       VALUES (?,?)
     `)
+
+    get_transactions_by_date = database.prepare(`
+      SELECT *
+      FROM transactions
+      ORDER BY tx_date ASC
+    `)
   },
 
   exec: (query) => database.exec(query),
@@ -87,10 +94,7 @@ const db = {
   insert_rtx: (rx_id, tx_id) => insert_rtx.run(rx_id, tx_id),
 
   transactions: () => {
-    // TODO sort by date ascending
-    return database.exec(`
-      SELECT * FROM transactions
-    `)
+    return get_transactions_by_date.all()
   },
 }
 
