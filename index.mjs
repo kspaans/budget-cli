@@ -18,6 +18,12 @@
 // TODO browser extension to scrape/download from banks
 // TODO parse quicken format from RBC
 
+// TODO refactor date, amount, account etc, functions into a shared lib
+// TODO figure out where to put account listing congfigs
+// TODO all amounts should be integers
+// TODO jsdoc typing
+// TODO normalize payee, accounts
+
 import { intro, cancel, isCancel, log, note, outro, select, selectKey, text } from '@clack/prompts';
 import fs from 'node:fs'
 import { setTimeout } from 'node:timers/promises'
@@ -40,17 +46,17 @@ const config = {
 const tasks = []
 
 const a2tx = (tx) => {
-  const credit_string = String(Number(tx.amount).toFixed(2))
-    .padStart(config.amount_padding - tx.credit.length, ' ')
-  const debit_string =  String(     (-tx.amount).toFixed(2))
-    .padStart(config.amount_padding - tx.debit.length,  ' ')
-  const recurring_string = tx.recurring_frequency ? `  ${tx.recurring_frequency}\n` : ''
-  const ruuid_string = tx.ruuid ? `  ; :ruuid: ${tx.ruuid}\n` : ''
-  return `${tx.date} ${tx.isPosted ? '*' : ' '} ${tx.payee}\n` +
+  const credit_string = String(Number(tx.tx_amount).toFixed(2))
+    .padStart(config.amount_padding - tx.tx_credit.length, ' ')
+  const debit_string =  String(     (-tx.tx_amount).toFixed(2))
+    .padStart(config.amount_padding - tx.tx_debit.length,  ' ')
+  const recurring_string = tx.tx_recurring_frequency ? `  ${tx.tx_recurring_frequency}\n` : ''
+  const ruuid_string = tx.tx_ruuid ? `  ; :ruuid: ${tx.tx_ruuid}\n` : ''
+  return `${tx.tx_date} ${tx.tx_posted ? '*' : ' '} ${tx.tx_payee}\n` +
     recurring_string +
     ruuid_string +
-    `  ${tx.credit}${credit_string} CAD\n` +
-    `  ${tx.debit}${debit_string} CAD\n`
+    `  ${tx.tx_credit}${credit_string} CAD\n` +
+    `  ${tx.tx_debit}${debit_string} CAD\n`
 }
 
 intro(`LEDGER INTERACTIVE ACCOUNTING`);
@@ -81,15 +87,12 @@ const out = fs.createWriteStream('./expenses.dat')
   });
 
 const quit = () => {
-  // TODO fix Ledger output
-  /*
   fs.writeFileSync('2budget.dat',
-    db.transactions
+    db.db.transactions()
       .sort((a,b) => ((a.date < b.date) ? -1 : 1))
       .map(a2tx)
       .join('\n')
   )
-  */
 }
 
 async function main_loop() {

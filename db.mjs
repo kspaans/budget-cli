@@ -39,9 +39,10 @@ const db = {
         , rx_id INTEGER REFERENCES recurring(rx_id)
       )
     `)
-    note(`running db init: ${result}`)
-
-    note(`there are ${database.prepare('SELECT COUNT(tx_id) FROM transactions').all().length} rows in the DB currently`)
+    note(
+      `Done running db init\n` +
+      `there are ${database.prepare('SELECT COUNT(tx_id) AS rows FROM transactions').get().rows} rows in the DB currently`
+    )
 
     insert_tx = database.prepare(`
       INSERT INTO transactions(
