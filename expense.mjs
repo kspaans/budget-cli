@@ -2,7 +2,7 @@ import { cancel, isCancel, note, selectKey, text } from '@clack/prompts'
 
 import { amount_prompt, date_prompt } from './lib.js'
 
-const expense = async (db, out) => {
+const expense = async (db) => {
   while (true) {
     const date = await date_prompt('When did/will the expense occur?')
 
@@ -88,12 +88,9 @@ const expense = async (db, out) => {
       `  ${expense_cat}${credit_string} CAD\n` +
       `  ${debit_cat}${debit_string} CAD\n`
     note(tx, 'Ledger Entry:')
-    out.write(tx)
-    out.write('\n')
 
     if (isCancel(expense_cat)) {
       cancel('Ok, leaving for now')
-      out.end()
       process.exit(0)
     }
 

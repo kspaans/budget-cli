@@ -30,13 +30,13 @@ import { setTimeout } from 'node:timers/promises'
 import { amount_prompt, date_prompt } from './lib.js'
 import db from './db.mjs'
 import expenses from './expense.mjs'
+import { output_txs_to_ledger as quit } from './ledger.js'
 import posted from './posted.mjs'
 import recurring from './recurring.mjs'
 import web from './web.mjs'
 
 let data
 const config = {
-  amount_padding: 35,
   income_accounts: [],
   expense_accounts: [],
   asset_accounts: [],
@@ -44,20 +44,6 @@ const config = {
 }
 
 const tasks = []
-
-const a2tx = (tx) => {
-  const credit_string = String(Number(tx.tx_amount).toFixed(2))
-    .padStart(config.amount_padding - tx.tx_credit.length, ' ')
-  const debit_string =  String(     (-tx.tx_amount).toFixed(2))
-    .padStart(config.amount_padding - tx.tx_debit.length,  ' ')
-  const recurring_string = tx.tx_recurring_frequency ? `  ${tx.tx_recurring_frequency}\n` : ''
-  const ruuid_string = tx.tx_ruuid ? `  ; :ruuid: ${tx.tx_ruuid}\n` : ''
-  return `${tx.tx_date} ${tx.tx_posted ? '*' : ' '} ${tx.tx_payee}\n` +
-    recurring_string +
-    ruuid_string +
-    `  ${tx.tx_credit}${credit_string} CAD\n` +
-    `  ${tx.tx_debit}${debit_string} CAD\n`
-}
 
 intro(`LEDGER INTERACTIVE ACCOUNTING`);
 
@@ -78,21 +64,6 @@ try {
     log.warn(`Error code ${err.code}`)
   }
   process.exit(1)
-}
-
-const out = fs.createWriteStream('./expenses.dat')
-  .on("end", async () => {
-    await setTimeout(500);
-    rest()
-  });
-
-const quit = () => {
-  fs.writeFileSync('2budget.dat',
-    db.db.transactions()
-      .sort((a,b) => ((a.date < b.date) ? -1 : 1))
-      .map(a2tx)
-      .join('\n')
-  )
 }
 
 async function main_loop() {
@@ -121,7 +92,6 @@ async function main_loop() {
       case 'q':
         quit()
         outro(`You're all set!`);
-        out.end()
         process.exit(0)
 
       case 't':
@@ -130,7 +100,7 @@ async function main_loop() {
         break
 
       case 'e': {
-        await expenses(database, out)
+        await expenses(database)
         break
       }
 
@@ -171,12 +141,9 @@ async function main_loop() {
           `  ${expense_cat}${credit_string} CAD\n` +
           `  ${debit_cat}${debit_string} CAD\n`
         note(tx, 'Ledger Entry:')
-        out.write(tx)
-        out.write('\n')
 
         if (isCancel(expense_cat)) {
           cancel('Ok, leaving for now')
-          out.end()
           process.exit(0)
         }
 
