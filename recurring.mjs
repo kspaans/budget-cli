@@ -1,4 +1,4 @@
-import { cancel, isCancel, note, selectKey, text } from '@clack/prompts';
+import { cancel, isCancel, note, selectKey } from '@clack/prompts'
 
 const rmap = {
   m: '; :recurring: monthly',

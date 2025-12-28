@@ -1,21 +1,10 @@
-import { cancel, isCancel, note, selectKey, text } from '@clack/prompts';
+import { cancel, isCancel, note, selectKey } from '@clack/prompts'
+
+import { date_prompt } from './lib.js'
 
 const posted = async (db) => {
   note('Mark transactions as posted or not.')
-  const start = await text({
-    message: 'Which transaction date should start looking at?',
-    placeholder: (new Date()).toLocaleDateString(),
-    initialValue: (new Date()).toLocaleDateString(),
-    validate: (d) => {
-      if (typeof d === 'undefined' || d === '') {
-        return 'Please enter a date.'
-      }
-      const result = Date.parse(d)
-      if (isNaN(result) || result === 'Invalid Date') {
-        return 'Please enter a valid date in YYYY-MM-DD format.'
-      }
-    }
-  })
+  const start = await date_prompt('Which transaction date should start looking at?')
   const txs = db.transactions()
   const l = txs.length
   let i = 1

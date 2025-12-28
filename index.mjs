@@ -2,7 +2,6 @@
 // - [ ] pressing enter instead of `e` to enter an expense crashes
 // - [ ] screen needs to be large enough to list all expense categories,
 //   need autocomplete!
-// - [ ] better date validation
 // - [ ] can't use true/false in selectKey()?
 
 // TODO autocomplete (needs inquirer)
@@ -28,6 +27,7 @@ import { intro, cancel, isCancel, log, note, outro, select, selectKey, text } fr
 import fs from 'node:fs'
 import { setTimeout } from 'node:timers/promises'
 
+import { date_prompt } from './lib.js'
 import db from './db.mjs'
 import expenses from './expense.mjs'
 import posted from './posted.mjs'
@@ -135,20 +135,7 @@ async function main_loop() {
       }
 
       case 'l': {
-        const date = await text({
-          message: 'When did/will the loan occur?',
-          placeholder: (new Date()).toLocaleDateString(),
-          initialValue: (new Date()).toLocaleDateString(),
-          validate: (d) => {
-            if (typeof d === 'undefined' || d === '') {
-              return 'Please enter a date.'
-            }
-            const result = Date.parse(d)
-            if (isNaN(result) || result === 'Invalid Date') {
-              return 'Please enter a valid date in YYYY-MM-DD format.'
-            }
-          }
-        })
+        const date = await date_prompt('When did/will the loan occur?')
 
         if (isCancel(date)) {
           cancel('Whoops, OK')
@@ -243,16 +230,7 @@ async function main_loop() {
             }
           }
         })
-        const due = await text({
-          message: 'When is the minimum payment due?',
-          placeholder: "1970-01-01",
-          /*validate: (value) => {
-            const num = Number(value)
-            if (isNaN(num) || typeof value === 'undefined') {
-              return 'Please enter a number.'
-            }
-          }*/
-        })
+        const due = await date_prompt('When is the minimum payment due?')
         break
       }
 
@@ -267,20 +245,7 @@ async function main_loop() {
       }
 
       case 'i': {
-        const date = await text({
-          message: 'When did the income occur?',
-          placeholder: (new Date()).toLocaleDateString(),
-          initialValue: (new Date()).toLocaleDateString(),
-          validate: (d) => {
-            if (typeof d === 'undefined' || d === '') {
-              return 'Please enter a date.'
-            }
-            const result = Date.parse(d)
-            if (isNaN(result) || result === 'Invalid Date') {
-              return 'Please enter a valid date in YYYY-MM-DD format.'
-            }
-          }
-        })
+        const date = await date_prompt('When did the income occur?')
 
         if (isCancel(date)) {
           cancel('Ok, leaving for now')
@@ -335,20 +300,7 @@ async function main_loop() {
         const payee = 'Opening Balances'
         const debit_cat = 'Equity:Opening Balances'
 
-        const date = await text({
-          message: 'When did the account open occur?',
-          placeholder: (new Date()).toLocaleDateString(),
-          initialValue: (new Date()).toLocaleDateString(),
-          validate: (d) => {
-            if (typeof d === 'undefined' || d === '') {
-              return 'Please enter a date.'
-            }
-            const result = Date.parse(d)
-            if (isNaN(result) || result === 'Invalid Date') {
-              return 'Please enter a valid date in YYYY-MM-DD format.'
-            }
-          }
-        })
+        const date = await date_prompt('When did the account open occur?')
 
         const asset = await select({
           message: 'Which account needs an opening balance?',
@@ -379,20 +331,7 @@ async function main_loop() {
 async function transfer() {
   const payee = 'Transfer'
 
-  const date = await text({
-    message: 'When did the transfer occur?',
-    placeholder: (new Date()).toLocaleDateString(),
-    initialValue: (new Date()).toLocaleDateString(),
-    validate: (d) => {
-      if (typeof d === 'undefined' || d === '') {
-        return 'Please enter a date.'
-      }
-      const result = Date.parse(d)
-      if (isNaN(result) || result === 'Invalid Date') {
-        return 'Please enter a valid date in YYYY-MM-DD format.'
-      }
-    }
-  })
+  const date = await date_prompt('When did the transfer occur?')
 
   const asset = await select({
     message: 'Where did you it transfer to?',

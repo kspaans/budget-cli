@@ -1,21 +1,10 @@
-import { cancel, isCancel, note, selectKey, text } from '@clack/prompts';
+import { cancel, isCancel, note, selectKey, text } from '@clack/prompts'
+
+import { date_prompt } from './lib.js'
 
 const expense = async (db, out) => {
   while (true) {
-    const date = await text({
-      message: 'When did/will the expense occur?',
-      placeholder: (new Date()).toLocaleDateString(),
-      initialValue: (new Date()).toLocaleDateString(),
-      validate: (d) => {
-        if (typeof d === 'undefined' || d === '') {
-          return 'Please enter a date.'
-        }
-        const result = Date.parse(d)
-        if (isNaN(result) || result === 'Invalid Date') {
-          return 'Please enter a valid date in YYYY-MM-DD format.'
-        }
-      }
-    })
+    const date = await date_prompt('When did/will the expense occur?')
 
     if (isCancel(date)) {
       cancel('Whoops, OK')
