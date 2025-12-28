@@ -27,7 +27,7 @@ import { intro, cancel, isCancel, log, note, outro, select, selectKey, text } fr
 import fs from 'node:fs'
 import { setTimeout } from 'node:timers/promises'
 
-import { date_prompt } from './lib.js'
+import { amount_prompt, date_prompt } from './lib.js'
 import db from './db.mjs'
 import expenses from './expense.mjs'
 import posted from './posted.mjs'
@@ -142,16 +142,7 @@ async function main_loop() {
           break
         }
 
-        const amount = await text({
-          message: 'OK, what\'s the amount?',
-          placeholder: "12.34",
-          validate: (value) => {
-            const num = Number(value)
-            if (isNaN(value) || typeof value === 'undefined' || value === '') {
-              return 'Please enter a number.'
-            }
-          }
-        })
+        const amount = await amount_prompt('OK, what\'s the amount?')
 
         // TODO: use `select()` with a pre-defined or dynamic list
         const loanee = await text({
@@ -193,16 +184,7 @@ async function main_loop() {
       }
 
       case 'c': {
-        const prev_bal = await text({
-          message: 'What was the previous balance?',
-          placeholder: "1,234.56",
-          validate: (value) => {
-            const num = Number(value)
-            if (isNaN(value) || typeof value === 'undefined') {
-              return 'Please enter a number.'
-            }
-          }
-        })
+        const prev_bal = await amount_prompt('What was the previous balance?')
 
         if (isCancel(prev_bal)) {
           cancel('Whoops, OK')
@@ -210,26 +192,8 @@ async function main_loop() {
           process.exit(0)
         }
 
-        const curr_bal = await text({
-          message: 'What is the current balance?',
-          placeholder: "1,234.56",
-          validate: (value) => {
-            const num = Number(value)
-            if (isNaN(value) || typeof value === 'undefined') {
-              return 'Please enter a number.'
-            }
-          }
-        })
-        const min_pay = await text({
-          message: 'What is the minimum payment?',
-          placeholder: "123.45",
-          validate: (value) => {
-            const num = Number(value)
-            if (isNaN(value) || typeof value === 'undefined') {
-              return 'Please enter a number.'
-            }
-          }
-        })
+        const curr_bal = await amount_prompt('What is the current balance?')
+        const min_pay = await amount_prompt('What is the minimum payment?')
         const due = await date_prompt('When is the minimum payment due?')
         break
       }
@@ -253,16 +217,7 @@ async function main_loop() {
           quit()
         }
 
-        const amount = await text({
-          message: 'OK, what\'s the amount?',
-          placeholder: "12.34",
-          validate: (value) => {
-            const num = Number(value)
-            if (isNaN(value) || typeof value === 'undefined' || value === '') {
-              return 'Please enter a number.'
-            }
-          }
-        })
+        const amount = await amount_prompt('OK, what\'s the amount?')
 
         const income_cat = await select({
           message: `How should this be categorized?`,
@@ -307,16 +262,7 @@ async function main_loop() {
           options: config.asset_accounts,
         })
 
-        const amount = await text({
-          message: 'OK, what\'s the amount?',
-          placeholder: "12.34",
-          validate: (value) => {
-            const num = Number(value)
-            if (isNaN(value) || typeof value === 'undefined' || value === '') {
-              return 'Please enter a number.'
-            }
-          },
-        })
+        const amount = await amount_prompt('OK, what\'s the amount?')
 
         // TODO convert amount to an integer
         db.db.insert_tx(date, payee, asset, debit_cat, amount, 1)
@@ -338,16 +284,7 @@ async function transfer() {
     options: config.asset_accounts.concat(config.liability_accounts),
   })
 
-  const amount = await text({
-    message: 'OK, what\'s the amount?',
-    placeholder: "12.34",
-    validate: (value) => {
-      const num = Number(value)
-      if (isNaN(value) || typeof value === 'undefined' || value === '') {
-        return 'Please enter a number.'
-      }
-    },
-  })
+  const amount = await amount_prompt('OK, what\'s the amount?')
   const debit = await select({
     message: 'Where did the transfer come from?',
     options: config.asset_accounts,

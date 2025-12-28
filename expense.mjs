@@ -1,6 +1,6 @@
 import { cancel, isCancel, note, selectKey, text } from '@clack/prompts'
 
-import { date_prompt } from './lib.js'
+import { amount_prompt, date_prompt } from './lib.js'
 
 const expense = async (db, out) => {
   while (true) {
@@ -11,16 +11,7 @@ const expense = async (db, out) => {
       break
     }
 
-    const amount = await text({
-      message: 'OK, what\'s the amount?',
-      placeholder: "12.34",
-      validate: (value) => {
-        const num = Number(value)
-        if (isNaN(value) || typeof value === 'undefined' || value === '') {
-          return 'Please enter a number.'
-        }
-      }
-    })
+    const amount = await amount_prompt('OK, what\'s the amount?')
     const expense_cat = await select({
       message: `How should this be categorized?`,
       options: config.expense_accounts

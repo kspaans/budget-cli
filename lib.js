@@ -1,5 +1,18 @@
 import { text } from '@clack/prompts'
 
+const amount_prompt = async (message) => {
+  return text({
+    message,
+    placeholder: "12.34",
+    validate: (value) => {
+      const num = Number(value)
+      if (isNaN(value) || typeof value === 'undefined' || value === '') {
+        return 'Please enter a number.'
+      }
+    }
+  })
+}
+
 const date_prompt = async (message) => {
   return await text({
     message,
@@ -18,5 +31,6 @@ const date_prompt = async (message) => {
 }
 
 export {
- date_prompt,
+  amount_prompt,
+  date_prompt,
 }
