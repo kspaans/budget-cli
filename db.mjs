@@ -5,7 +5,9 @@ let database
 let insert_tx
 let insert_recurring
 let insert_rtx
+let insert_posting
 let get_transactions_by_date
+let get_postings_by_tx_id
 let get_recurring
 
 const db = {
@@ -37,7 +39,13 @@ const db = {
           rtx_id INTEGER PRIMARY KEY AUTOINCREMENT
         , tx_id INTEGER REFERENCES transactions(tx_id)
         , rx_id INTEGER REFERENCES recurring(rx_id)
-      )
+      );
+      CREATE TABLE IF NOT EXISTS postings(
+          pst_id INTEGER PRIMARY KEY AUTOINCREMENT
+        , pst_amount INTEGER
+        , pst_account TEXT
+        , tx_id INTEGER REFERENCES transactions(tx_id)
+      );
     `)
     note(
       `Done running db init\n` +
@@ -80,10 +88,25 @@ const db = {
       VALUES (?,?)
     `)
 
+    insert_posting = database.prepare(`
+      INSERT INTO postings(
+          pst_amount
+        , pst_account
+        , tx_id
+      )
+      VALUES (?,?,?)
+    `)
+
     get_transactions_by_date = database.prepare(`
       SELECT *
       FROM transactions
       ORDER BY tx_date ASC
+    `)
+
+    get_postings_by_tx_id = database.prepare(`
+      SELECT *
+      FROM postings
+      WHERE tx_id = ?
     `)
 
     get_recurring = database.prepare(`
@@ -100,13 +123,19 @@ const db = {
 
   insert_rtx: (rx_id, tx_id) => insert_rtx.run(rx_id, tx_id),
 
+  insert_posting: (amount, account, tx_id) => insert_posting.run(amount, account, tx_id),
+
   transactions: () => {
     return get_transactions_by_date.all()
   },
 
+  postings_for_tx: (tx_id) => {
+    return get_postings_by_tx_id.all(tx_id)
+  },
+
   recurring: () => {
     return get_recurring.all()
-  }
+  },
 }
 
 export default {

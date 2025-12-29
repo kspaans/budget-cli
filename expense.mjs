@@ -1,8 +1,8 @@
-import { cancel, isCancel, note, selectKey, text } from '@clack/prompts'
+import { cancel, isCancel, note, select, selectKey, text } from '@clack/prompts'
 
 import { amount_prompt, date_prompt } from './lib.js'
 
-const expense = async (db) => {
+const expense = async (db, config) => {
   while (true) {
     const date = await date_prompt('When did/will the expense occur?')
 
@@ -12,10 +12,50 @@ const expense = async (db) => {
     }
 
     const amount = await amount_prompt('OK, what\'s the amount?')
-    const expense_cat = await select({
-      message: `How should this be categorized?`,
-      options: config.expense_accounts
+
+    let expense_cat
+    const postings = []
+    const split = await select({
+      message: 'Should the expense be split into multiple categories?',
+      options: [
+        { value: 'y', label: 'Yes' },
+        { value: 'n', label: 'No' },
+      ],
     })
+    if (split === 'y') {
+      // create postings
+      // total of all posting amounts should match expense amount
+      // use BigInt type to force integer arithmetic using cents
+      let remaining = BigInt(Math.round(amount*100))
+      while (remaining > 0) {
+        // TODO convert cents back into decimal dollars
+        const split_amount = await text({
+          message: `You have ${remaining} left to split, how much would you like to split now?`,
+          placeholder: '12.34',
+          validate: (value) => {
+            const num = Number(value)
+            if (isNaN(value) || typeof value === 'undefined' || value === '') {
+              return 'Please enter a number.'
+            }
+            if (num > remaining ) {
+              return `Amount is larger than remaining left to split: ${remaining}. Please give a smaller amount.`
+            }
+          }
+        })
+        const split_expense_cat = await select({
+          message: `How should this be categorized?`,
+          options: config.expense_accounts
+        })
+        postings.push([split_amount, split_expense_cat])
+        remaining -= BigInt(Math.round(split_amount*100))
+      }
+    } else {
+      expense_cat = await select({
+        message: `How should this be categorized?`,
+        options: config.expense_accounts
+      })
+      postings.push([amount, expense_cat])
+    }
 
     let debit_cat = await select({
       message: 'Debit from where?',
@@ -79,15 +119,14 @@ const expense = async (db) => {
       db.exec(`COMMIT`)
     } else {
       // TODO make the tx and rtx insert idempotent
-      db.insert_tx(date, payee, expense_cat, debit_cat, amount, 0)
+      // TODO support recurring split expenses
+      db.exec(`BEGIN TRANSACTION`)
+      const tx_id = db.insert_tx(date, payee, null, debit_cat, amount, 0).lastInsertRowid
+      for (const p of postings) {
+        db.insert_posting(p[0], p[1], tx_id)
+      }
+      db.exec(`COMMIT`)
     }
-
-    const credit_string = String(amount).padStart(56 - expense_cat.length, ' ')
-    const debit_string = String(-amount).padStart(56 - debit_cat.length, ' ')
-    const tx = `${date}   ${payee}\n` +
-      `  ${expense_cat}${credit_string} CAD\n` +
-      `  ${debit_cat}${debit_string} CAD\n`
-    note(tx, 'Ledger Entry:')
 
     if (isCancel(expense_cat)) {
       cancel('Ok, leaving for now')
@@ -100,14 +139,13 @@ const expense = async (db) => {
         { value: 'e', label: 'Enter another expense' },
         { value: 'q', label: 'Exit', hint: 'niiiiice work' },
       ],
-    });
+    })
     if (projectType === 'q') {
-      quit()
       break
     }
   }
 }
 
-export default {
-  expense
+export {
+  expense,
 }

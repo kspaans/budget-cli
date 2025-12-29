@@ -29,7 +29,7 @@ import { setTimeout } from 'node:timers/promises'
 
 import { amount_prompt, date_prompt } from './lib.js'
 import db from './db.mjs'
-import expenses from './expense.mjs'
+import { expense } from './expense.mjs'
 import { output_txs_to_ledger as quit } from './ledger.js'
 import posted from './posted.mjs'
 import recurring from './recurring.mjs'
@@ -100,7 +100,7 @@ async function main_loop() {
         break
 
       case 'e': {
-        await expenses(database)
+        await expense(db.db, config)
         break
       }
 
