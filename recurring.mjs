@@ -1,11 +1,13 @@
 import { cancel, isCancel, note, selectKey } from '@clack/prompts'
 
 const rmap = {
+  a: '; :recurring: annually',
   m: '; :recurring: monthly',
   b: '; :recurring: bi-weekly',
   w: '; :recurring: weekly',
 }
 const rmap_human = {
+  a: 'annually',
   m: 'monthly',
   b: 'bi-weekly',
   w: 'weekly',
@@ -37,7 +39,7 @@ const recurring = async (db) => {
         for await (const rx of db.recurring()) {
           const amount = ('$'+String(Number(rx.rx_amount).toFixed(2))).padStart(8, ' ')
           const r = rmap_human[rx.rx_frequency].padStart(9, ' ')
-          message += `Recurring ${rx.rx_amount}, ${r}: ${rx.rx_payee} ${rx.rx_credit} \n`
+          message += `Recurring ${amount}, ${r}: ${rx.rx_credit.padEnd(25, ' ')} (${rx.rx_payee}) \n`
         }
         note(message)
         break
