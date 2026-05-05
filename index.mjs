@@ -1,8 +1,26 @@
 // BUGS
+// - [ ] null/0-len payee name crashes app
+// - [ ] marking transactions as posted isn't recording in the DB
+// - [ ] SQLite param 5 when inserting recurring txns that are split
 // - [ ] pressing enter instead of `e` to enter an expense crashes
 // - [ ] screen needs to be large enough to list all expense categories,
 //   need autocomplete!
 // - [ ] can't use true/false in selectKey()?
+// - [ ] have list of payees so that payees can be linked, list/autocomplete
+//   for payee selection
+
+// TODO Workflows
+// - [ ] have log output for when transactions are saved
+// - [ ] monthly balance, expenses for budgeting
+// - [ ] reconciliation
+// - [ ] edit transactions
+// - [ ] refunds/misc income that's balanced against a different account
+// - [ ] alt posting workflow that's more free to select which debit and credit accounts
+//   - pick debit account
+//   - pick credit account
+//   - amount
+//   - repeat until all postings done
+//   - balance check of all postings
 
 // TODO autocomplete (needs inquirer)
 // TODO CC creation (billing dates, credit, maybe reoncile bills)
@@ -22,6 +40,7 @@
 // TODO all amounts should be integers
 // TODO jsdoc typing
 // TODO normalize payee, accounts
+// TODO comments on transactions
 
 import { intro, cancel, isCancel, log, note, outro, select, selectKey, text } from '@clack/prompts';
 import fs from 'node:fs'

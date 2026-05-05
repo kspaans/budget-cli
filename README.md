@@ -27,4 +27,8 @@ This tool outputs the [Ledger][0] file format. It is a double-entry accounting
 enging using plaintext files and a CLI tool. You can install the Ledger
 executable and then run e.g. a balance report using `ledger -f expenses.dat bal`
 
+## TODO and Ideas
+
+- see https://micasa.dev
+- add a `--demo` option so make it easier to try 
 [0]: https://ledger-cli.org

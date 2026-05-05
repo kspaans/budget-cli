@@ -42,11 +42,11 @@ const expense = async (db, config) => {
             }
           }
         })
-        const split_expense_cat = await select({
+        expense_cat = await select({
           message: `How should this be categorized?`,
           options: config.expense_accounts
         })
-        postings.push([split_amount, split_expense_cat])
+        postings.push([split_amount, expense_cat])
         remaining -= BigInt(Math.round(split_amount*100))
       }
     } else {
@@ -89,44 +89,30 @@ const expense = async (db, config) => {
       ],
     })
 
-    let recurring_frequency = false
-    let ruuid = undefined
+    db.exec(`BEGIN TRANSACTION`)
+    const tx_id = db.insert_tx(date, payee, null, debit_cat, amount, 0).lastInsertRowid
+    for (const p of postings) {
+      db.insert_posting(p[0], p[1], tx_id)
+    }
     if (recurring === 'y') {
       const frequency = await selectKey({
         message: 'How often is it recurring?',
         options: [
-          { key: 'w', value: 'w', label: 'Weekly' },
-          { key: 'b', value: 'b', label: 'Bi-Weekly (every two weeks)' },
-          { key: 't', value: 't', label: 'Bi-Monthly (twice a month)' },
           { key: 'm', value: 'm', label: 'Monthly' },
+          { key: 'b', value: 'b', label: 'Bi-Weekly (every two weeks)' },
+          { key: 'w', value: 'w', label: 'Weekly' },
           { key: 'a', value: 'a', label: 'Annually' },
+          { key: 't', value: 't', label: 'Bi-Monthly (twice a month)' },
         ]
       })
-      const value_map = {
-        w: 'weekly',
-        b: 'bi-weekly',
-        t: 'bi-monthly',
-        m: 'monthly',
-        a: 'annually',
-      }
-      recurring_frequency = `; :recurring: ${value_map[frequency]}`
-      ruuid = crypto.randomUUID()
-      db.exec(`BEGIN TRANSACTION`)
+      const ruuid = crypto.randomUUID()
       // TODO convert amount to an integer
-      const rx_id = db.insert_recurring(date, date, payee, amount, expense_cat, debit_cat, frequency, ruuid)
-      const tx_id = db.insert_tx(date, payee, expense_cat, debit_cat, amount, 0)
-      db.insert_rtx(rx_id.lastInsertRowid, tx_id.lastInsertRowid)
-      db.exec(`COMMIT`)
-    } else {
-      // TODO make the tx and rtx insert idempotent
-      // TODO support recurring split expenses
-      db.exec(`BEGIN TRANSACTION`)
-      const tx_id = db.insert_tx(date, payee, null, debit_cat, amount, 0).lastInsertRowid
-      for (const p of postings) {
-        db.insert_posting(p[0], p[1], tx_id)
-      }
-      db.exec(`COMMIT`)
+      // const int_amount = BigInt(Math.round(amount*100))
+      // TODO when split, what should the expense category be for the recurring row?
+      const rx_id = db.insert_recurring(date, date, payee, amount, expense_cat, debit_cat, frequency, ruuid).lastInsertRowid
+      db.insert_rtx(rx_id, tx_id)
     }
+    db.exec(`COMMIT`)
 
     if (isCancel(expense_cat)) {
       cancel('Ok, leaving for now')
