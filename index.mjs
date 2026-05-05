@@ -13,6 +13,7 @@
 // - [ ] have log output for when transactions are saved
 // - [ ] monthly balance, expenses for budgeting
 // - [ ] reconciliation
+// - [ ] create list of accounts
 // - [ ] edit transactions
 // - [ ] refunds/misc income that's balanced against a different account
 // - [ ] alt posting workflow that's more free to select which debit and credit accounts
@@ -22,15 +23,17 @@
 //   - repeat until all postings done
 //   - balance check of all postings
 
+// TODO travel
+// - [ ] support multtiple currencies
+// - [ ] add extra account for wise
+// - [ ] support FX for converting between currencies
+
 // TODO autocomplete (needs inquirer)
 // TODO CC creation (billing dates, credit, maybe reoncile bills)
 // TODO track CC available-credit
 // TODO use event-sourcing model to simplify the representation,
 //      reconciliation, and input of transactions and posting events
 // TODO fireproof-storage for the log of transactions?
-// TODO workflow to create list of accounts
-// TODO edit transactions
-// TODO support splitting TX e.g. costco or amazon
 // TODO have it integrate with Wave API (for corp???)
 // TODO browser extension to scrape/download from banks
 // TODO parse quicken format from RBC
@@ -264,6 +267,11 @@ async function transfer() {
   const payee = 'Transfer'
 
   const date = await date_prompt('When did the transfer occur?')
+
+  if (isCancel(date)) {
+    cancel('Whoops, OK')
+    return
+  }
 
   const asset = await select({
     message: 'Where did you it transfer to?',
