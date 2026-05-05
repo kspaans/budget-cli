@@ -14,7 +14,11 @@
 // - [ ] monthly balance, expenses for budgeting
 // - [ ] reconciliation
 // - [ ] create list of accounts
+//   - [ ] have accounts table and FKs in schema
+//   - [ ] move accounts into DB
+//   - [ ] have TUI workflow for managing accounts
 // - [ ] edit transactions
+//   - [ ] modify date of tx
 // - [ ] refunds/misc income that's balanced against a different account
 // - [ ] alt posting workflow that's more free to select which debit and credit accounts
 //   - pick debit account
