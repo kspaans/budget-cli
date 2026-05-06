@@ -54,6 +54,7 @@ import fs from 'node:fs'
 import { setTimeout } from 'node:timers/promises'
 
 import { amount_prompt, date_prompt } from './lib.js'
+import currency from './currency.js'
 import db from './db.mjs'
 import { expense } from './expense.mjs'
 import { output_txs_to_ledger as quit } from './ledger.js'
@@ -110,6 +111,7 @@ async function main_loop() {
         { key: 'p', value: 'p', label: 'Mark transactions as Posted' },
         { key: 'o', value: 'o', label: 'Add or Adjust Opening Balances' },
         { key: 't', value: 't', label: 'Transfer balances between accounts' },
+        { key: 'y', value: 'y', label: 'Manage currencies' },
         { key: 'q', value: 'q', label: 'Exit', hint: 'niiiiice work' },
       ],
     });
@@ -123,6 +125,10 @@ async function main_loop() {
       case 't':
         // TODO what about a refund of medical expenses?
         await transfer()
+        break
+
+      case 'y':
+        await currency(db.db)
         break
 
       case 'e': {

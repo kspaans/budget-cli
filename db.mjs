@@ -2,13 +2,18 @@ import sqlite from 'node:sqlite'
 
 const DB_PATH = './.ledger.db'
 let database
+let count_currency_by_id
+let insert_currency
 let insert_tx
 let insert_recurring
 let insert_rtx
 let insert_posting
+let get_currencies
+let get_default_currency
 let get_transactions_by_date
 let get_postings_by_tx_id
 let get_recurring
+let set_default_currency
 
 const db = {
   init_db: (note) => {
@@ -23,6 +28,7 @@ const db = {
         , tx_debit TEXT
         , tx_amount INTEGER
         , tx_posted BOOLEAN
+        , cur_id INTEGER REFERENCES currencies(cur_id)
       );
       CREATE TABLE IF NOT EXISTS recurring(
           rx_id INTEGER PRIMARY KEY AUTOINCREMENT
@@ -45,12 +51,39 @@ const db = {
         , pst_amount INTEGER
         , pst_account TEXT
         , tx_id INTEGER REFERENCES transactions(tx_id)
+        , cur_id INTEGER REFERENCES currencies(cur_id)
+      );
+      CREATE TABLE IF NOT EXISTS currencies(
+          cur_id INTEGER PRIMARY KEY AUTOINCREMENT
+        , cur_code TEXT
+        , cur_name TEXT
+      );
+      CREATE TABLE IF NOT EXISTS default_currency(
+          cur_id INTEGER REFERENCES currencies(cur_id)
       );
     `)
     note(
       `Done running db init\n` +
       `there are ${database.prepare('SELECT COUNT(tx_id) AS rows FROM transactions').get().rows} rows in the DB currently`
     )
+
+    count_currency_by_id = database.prepare(`
+      SELECT COUNT(transactions.tx_id) AS cur_count
+      FROM transactions
+      INNER JOIN postings
+      ON postings.tx_id = transactions.tx_id
+      WHERE transactions.cur_id = ?
+      OR postings.cur_id = ?
+    `)
+
+    insert_currency = database.prepare(`
+      INSERT INTO currencies(
+          cur_code
+        , cur_name
+      )
+      VALUES (?,?)
+      RETURNING cur_id
+    `)
 
     insert_tx = database.prepare(`
       INSERT INTO transactions(
@@ -97,6 +130,16 @@ const db = {
       VALUES (?,?,?)
     `)
 
+    get_currencies = database.prepare(`
+      SELECT *
+      FROM currencies
+    `)
+
+    get_default_currency = database.prepare(`
+      SELECT cur_id
+      FROM default_currency
+    `)
+
     get_transactions_by_date = database.prepare(`
       SELECT *
       FROM transactions
@@ -112,6 +155,11 @@ const db = {
     get_recurring = database.prepare(`
       SELECT *
       FROM recurring
+    `)
+
+    set_default_currency = database.prepare(`
+      UPDATE default_currency
+      SET cur_id = ?
     `)
   },
 
@@ -135,6 +183,25 @@ const db = {
 
   recurring: () => {
     return get_recurring.all()
+  },
+
+  count_currency: (cur_id) => {
+    return count_currency_by_id.get(cur_id, cur_id)
+  },
+
+  currencies: () => {
+    return get_currencies.all()
+  },
+
+  default_currency: () => {
+    return get_default_currency.get()
+  },
+
+  insert_currency: (code, name, isDefault) => {
+    const cur_id = insert_currency.run(code, name)
+    if (isDefault) {
+      set_default_currency.run(cur_id)
+    }
   },
 }
 
