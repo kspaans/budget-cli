@@ -34,7 +34,10 @@ const add = async (db) => {
     placeholder: "CAD",
     validate: (value) => {
       if (value.length === 0) {
-         'Please enter a currency code.'
+        return 'Please enter a currency code.'
+      }
+      if (value.length !== 2) {
+        return 'Currency code must be exactly 3 letters: `ABC`'
       }
     }
   })

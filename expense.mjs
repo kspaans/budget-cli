@@ -1,6 +1,6 @@
 import { cancel, isCancel, note, select, selectKey, text } from '@clack/prompts'
 
-import { amount_prompt, date_prompt } from './lib.js'
+import { amount_prompt, currency_prompt, date_prompt } from './lib.js'
 
 const expense = async (db, config) => {
   while (true) {
@@ -13,6 +13,12 @@ const expense = async (db, config) => {
 
     const amount = await amount_prompt('OK, what\'s the amount?')
 
+    const cur_id = await currency_prompt('Which currency did the expense use?')
+    if (isCancel(cur_id)) {
+      cancel('Whoops, OK')
+      break
+    }
+
     let expense_cat
     const postings = []
     const split = await select({
@@ -22,6 +28,10 @@ const expense = async (db, config) => {
         { value: 'n', label: 'No' },
       ],
     })
+    if (isCancel(split)) {
+      cancel('Whoops, OK')
+      break
+    }
     if (split === 'y') {
       // create postings
       // total of all posting amounts should match expense amount
@@ -90,7 +100,7 @@ const expense = async (db, config) => {
     })
 
     db.exec(`BEGIN TRANSACTION`)
-    const tx_id = db.insert_tx(date, payee, null, debit_cat, amount, 0).lastInsertRowid
+    const tx_id = db.insert_tx(date, payee, null, debit_cat, amount, 0, cur_id).lastInsertRowid
     for (const p of postings) {
       db.insert_posting(p[0], p[1], tx_id)
     }

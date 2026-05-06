@@ -28,8 +28,13 @@
 //   - balance check of all postings
 
 // TODO travel
-// - [ ] support multtiple currencies
-// - [ ] add extra account for wise
+// - [] support multtiple currencies
+//   - [ ] initialize one default currency
+//   - [X] select currency for expense
+//   - [ ] select currency for income
+//   - [ ] select currency for transfer?
+//   - [ ] select currency for loan
+// - [X] add extra account for wise
 // - [ ] support FX for converting between currencies
 
 // TODO autocomplete (needs inquirer)

@@ -1,4 +1,6 @@
-import { text } from '@clack/prompts'
+import { select, text } from '@clack/prompts'
+
+import db from './db.mjs'
 
 const amount_prompt = async (message) => {
   return text({
@@ -10,6 +12,19 @@ const amount_prompt = async (message) => {
         return 'Please enter a number.'
       }
     }
+  })
+}
+
+const currency_prompt = async(message) => {
+  const currencies = db.db.currencies().map(c => {
+    return {
+      value: c.cur_id,
+      label: `${c.cur_code} (${c.cur_name})`,
+    }
+  })
+  return await select({
+    message,
+    options: currencies
   })
 }
 
@@ -32,5 +47,6 @@ const date_prompt = async (message) => {
 
 export {
   amount_prompt,
+  currency_prompt,
   date_prompt,
 }

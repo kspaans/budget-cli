@@ -9,6 +9,7 @@ let insert_recurring
 let insert_rtx
 let insert_posting
 let get_currencies
+let get_currency_code_by_id
 let get_default_currency
 let get_transactions_by_date
 let get_postings_by_tx_id
@@ -93,8 +94,9 @@ const db = {
         , tx_debit
         , tx_amount
         , tx_posted
+        , cur_id
       )
-      VALUES (?,?,?,?,?,?)
+      VALUES (?,?,?,?,?,?,?)
       RETURNING tx_id
     `)
 
@@ -135,6 +137,12 @@ const db = {
       FROM currencies
     `)
 
+    get_currency_code_by_id = database.prepare(`
+      SELECT cur_code
+      FROM currencies
+      WHERE cur_id = ?
+    `)
+
     get_default_currency = database.prepare(`
       SELECT cur_id
       FROM default_currency
@@ -165,7 +173,7 @@ const db = {
 
   exec: (query) => database.exec(query),
 
-  insert_tx: (date, payee, credit_cat, debit_cat, amount, posted) => insert_tx.run(date, payee, credit_cat, debit_cat, amount, posted),
+  insert_tx: (date, payee, credit_cat, debit_cat, amount, posted, currency_id) => insert_tx.run(date, payee, credit_cat, debit_cat, amount, posted, currency_id),
 
   insert_recurring: (start_date, date, payee, amount, expense_cat, debit_cat, frequency, ruuid) => insert_recurring.run(start_date, date, payee, amount, expense_cat, debit_cat, frequency, ruuid),
 
@@ -191,6 +199,10 @@ const db = {
 
   currencies: () => {
     return get_currencies.all()
+  },
+
+  currency_code: (cur_id) => {
+    return get_currency_code_by_id.get(cur_id)
   },
 
   default_currency: () => {
