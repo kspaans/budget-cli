@@ -39,7 +39,7 @@ const expense = async (db, config) => {
       let remaining_cents = BigInt(Math.round(amount*100))
       while (remaining_cents > 0) {
         const split_amount_dollars = await text({
-          message: `You have ${Math.floor(remaining_cents/100)}.${remaining_cents % 100} left to split, how much would you like to split now?`,
+          message: `You have ${remaining_cents / 100n}.${remaining_cents % 100n} left to split, how much would you like to split now?`,
           placeholder: '12.34',
           validate: (value) => {
             const num_dollar = Number(value)
@@ -48,7 +48,7 @@ const expense = async (db, config) => {
             }
             const num_cents = BigInt(Math.round(num_dollar*100))
             if (num_cents > remaining_cents ) {
-              return `Amount ${num_dollar} is larger than remaining left to split: ${Math.floor(remaining_cents/100)}.${remaining_cents % 100}. Please give a smaller amount.`
+              return `Amount ${num_dollar} is larger than remaining left to split: ${remaining_cents / 100n}.${remaining_cents % 100n}. Please give a smaller amount.`
             }
           }
         })
