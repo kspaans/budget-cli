@@ -34,6 +34,7 @@
 //   - [ ] select currency for income
 //   - [ ] select currency for transfer?
 //   - [ ] select currency for loan
+//   - [ ] select currency for recurring tx
 // - [X] add extra account for wise
 // - [ ] support FX for converting between currencies
 

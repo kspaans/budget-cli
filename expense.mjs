@@ -36,19 +36,19 @@ const expense = async (db, config) => {
       // create postings
       // total of all posting amounts should match expense amount
       // use BigInt type to force integer arithmetic using cents
-      let remaining = BigInt(Math.round(amount*100))
-      while (remaining > 0) {
-        // TODO convert cents back into decimal dollars
-        const split_amount = await text({
-          message: `You have ${remaining} left to split, how much would you like to split now?`,
+      let remaining_cents = BigInt(Math.round(amount*100))
+      while (remaining_cents > 0) {
+        const split_amount_dollars = await text({
+          message: `You have ${Math.floor(remaining_cents/100)}.${remaining_cents % 100} left to split, how much would you like to split now?`,
           placeholder: '12.34',
           validate: (value) => {
-            const num = Number(value)
+            const num_dollar = Number(value)
             if (isNaN(value) || typeof value === 'undefined' || value === '') {
               return 'Please enter a number.'
             }
-            if (num > remaining ) {
-              return `Amount is larger than remaining left to split: ${remaining}. Please give a smaller amount.`
+            const num_cents = BigInt(Math.round(num_dollar*100))
+            if (num_cents > remaining_cents ) {
+              return `Amount ${num_dollar} is larger than remaining left to split: ${Math.floor(remaining_cents/100)}.${remaining_cents % 100}. Please give a smaller amount.`
             }
           }
         })
@@ -56,8 +56,8 @@ const expense = async (db, config) => {
           message: `How should this be categorized?`,
           options: config.expense_accounts
         })
-        postings.push([split_amount, expense_cat])
-        remaining -= BigInt(Math.round(split_amount*100))
+        postings.push([split_amount_dollars, expense_cat])
+        remaining_cents -= BigInt(Math.round(split_amount_dollars*100))
       }
     } else {
       expense_cat = await select({

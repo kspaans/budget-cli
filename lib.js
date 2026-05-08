@@ -2,6 +2,7 @@ import { select, text } from '@clack/prompts'
 
 import db from './db.mjs'
 
+// returns decimal "dollars"
 const amount_prompt = async (message) => {
   return text({
     message,
