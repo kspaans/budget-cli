@@ -1,4 +1,4 @@
-import { cancel, isCancel, note, select, selectKey, text } from '@clack/prompts'
+import { autocomplete, cancel, isCancel, note, select, selectKey, text } from '@clack/prompts'
 
 import { amount_prompt, currency_prompt, date_prompt } from './lib.js'
 
@@ -52,7 +52,7 @@ const expense = async (db, config) => {
             }
           }
         })
-        expense_cat = await select({
+        expense_cat = await autocomplete({
           message: `How should this be categorized?`,
           options: config.expense_accounts
         })
@@ -60,7 +60,7 @@ const expense = async (db, config) => {
         remaining_cents -= BigInt(Math.round(split_amount_dollars*100))
       }
     } else {
-      expense_cat = await select({
+      expense_cat = await autocomplete({
         message: `How should this be categorized?`,
         options: config.expense_accounts
       })

@@ -3,8 +3,6 @@
 // - [ ] marking transactions as posted isn't recording in the DB
 // - [ ] SQLite param 5 when inserting recurring txns that are split
 // - [ ] pressing enter instead of `e` to enter an expense crashes
-// - [ ] screen needs to be large enough to list all expense categories,
-//   need autocomplete!
 // - [ ] can't use true/false in selectKey()?
 // - [ ] have list of payees so that payees can be linked, list/autocomplete
 //   for payee selection
@@ -40,7 +38,6 @@
 // - [X] add extra account for wise
 // - [ ] support FX for converting between currencies
 
-// TODO autocomplete (needs inquirer)
 // TODO CC creation (billing dates, credit, maybe reoncile bills)
 // TODO track CC available-credit
 // TODO use event-sourcing model to simplify the representation,
@@ -57,7 +54,7 @@
 // TODO normalize payee, accounts
 // TODO comments on transactions
 
-import { intro, cancel, isCancel, log, note, outro, select, selectKey, text } from '@clack/prompts';
+import { autocomplete, intro, cancel, isCancel, log, note, outro, select, selectKey, text } from '@clack/prompts';
 import fs from 'node:fs'
 import { setTimeout } from 'node:timers/promises'
 
@@ -159,7 +156,7 @@ async function main_loop() {
           message: `Who is the loan to?`,
         })
 
-        let debit_cat = await select({
+        let debit_cat = await autocomplete({
           message: 'Debit from where?',
           options: config.asset_accounts.concat({ value: 'CC', label: 'Credit Card' }),
         })
