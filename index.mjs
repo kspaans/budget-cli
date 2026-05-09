@@ -59,7 +59,7 @@ import { intro, cancel, isCancel, log, note, outro, select, selectKey, text } fr
 import fs from 'node:fs'
 import { setTimeout } from 'node:timers/promises'
 
-import { amount_prompt, date_prompt } from './lib.js'
+import { amount_prompt, currency_prompt, date_prompt } from './lib.js'
 import currency from './currency.js'
 import db from './db.mjs'
 import { expense } from './expense.mjs'
@@ -295,12 +295,15 @@ async function transfer() {
   })
 
   const amount = await amount_prompt('OK, what\'s the amount?')
+
+  const cur_id = await currency_prompt('Which currency was transfered?')
+
   const debit = await select({
     message: 'Where did the transfer come from?',
     options: config.asset_accounts,
   })
 
-  db.db.insert_tx(date, payee, asset, debit, amount, 1)
+  db.db.insert_tx(date, payee, asset, debit, amount, 1, cur_id)
 }
 
 main_loop()
