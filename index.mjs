@@ -26,13 +26,15 @@
 //   - amount
 //   - repeat until all postings done
 //   - balance check of all postings
+// - [ ] make web postings background be proportional to the size of the credit
+//   relative to the whole transaction
 
 // TODO travel
 // - [] support multtiple currencies
 //   - [ ] initialize one default currency
 //   - [X] select currency for expense
 //   - [ ] select currency for income
-//   - [ ] select currency for transfer?
+//   - [X] select currency for transfer?
 //   - [ ] select currency for loan
 //   - [ ] select currency for recurring tx
 // - [X] add extra account for wise
@@ -100,7 +102,7 @@ try {
 }
 
 async function main_loop() {
-  note(`Runnign website check out http://localhost:8888/`)
+  note(`Running website check out http://localhost:8888/`)
   const w = await web.server(db.db.transactions())
   while (true) {
     const projectType = await selectKey({ // maybe try `select()` instead so enter works?

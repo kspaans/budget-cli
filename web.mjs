@@ -1,5 +1,7 @@
 import http from 'node:http'
 
+import db from './db.mjs'
+
 const head = `
 <!DOCTYPE html>
 <html>
@@ -100,8 +102,25 @@ const script = `
 `
 
 const make_tx_row = (tx, i) => {
-  // TODO: postings are always 2 per transaction right now, will have to
-  // support multiple postings (split transactions) soon
+  let credit_rows = ''
+  if (tx.tx_credit !== null) {
+    credit_rows = `
+      <div class="prow">
+        <div class="account">${tx.tx_credit}</div>
+        <div class="amount">${String(Number(tx.tx_amount).toFixed(2))}</div>
+      </div>
+    `
+  } else {
+    for (const p of db.db.postings_for_tx(tx.tx_id)) {
+      credit_rows += `
+        <div class="prow">
+          <div class="account">${p.pst_account}</div>
+          <div class="amount">${String(Number(p.pst_amount).toFixed(2))}</div>
+        </div>
+      `
+    }
+  }
+
   return `
     <div style="display: flex;">
       <div class="box">
@@ -111,13 +130,10 @@ const make_tx_row = (tx, i) => {
           <div>${tx.tx_payee}</div>
         </div>
         <div class="postings">
-          <div class="prow">
-            <div class="account">${tx.tx_credit}</div>
-            <div class="amount">${tx.tx_amount}</div>
-          </div>
+          ${credit_rows}
           <div class="prow debit">
             <div class="account">${tx.tx_debit}</div>
-            <div class="amount">-${tx.tx_amount}</div>
+            <div class="amount">-${String(Number(tx.tx_amount).toFixed(2))}</div>
           </div>
         </div>
       </div>
