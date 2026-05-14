@@ -91,18 +91,19 @@ const expense = async (db, config) => {
       }
     })
 
+    // TODO try using confirm dialogue?
     const recurring = await select({
       message: 'Is it recurring?',
       options: [
-        { value: 'y', label: 'Yes' },
         { value: 'n', label: 'No' },
+        { value: 'y', label: 'Yes' },
       ],
     })
 
     db.exec(`BEGIN TRANSACTION`)
     const tx_id = db.insert_tx(date, payee, null, debit_cat, amount, 0, cur_id).lastInsertRowid
     for (const p of postings) {
-      db.insert_posting(p[0], p[1], tx_id)
+      db.insert_posting(p[0], p[1], tx_id, cur_id)
     }
     if (recurring === 'y') {
       const frequency = await selectKey({

@@ -26,6 +26,7 @@
 //   - balance check of all postings
 // - [ ] make web postings background be proportional to the size of the credit
 //   relative to the whole transaction
+// - [ ] don't DI config, move it to a module, or put accounts in DB
 
 // TODO travel
 // - [] support multtiple currencies
@@ -133,7 +134,7 @@ async function main_loop() {
         break
 
       case 'y':
-        await currency(db.db)
+        await currency(db.db, config)
         break
 
       case 'e': {

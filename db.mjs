@@ -128,8 +128,9 @@ const db = {
           pst_amount
         , pst_account
         , tx_id
+        , cur_id
       )
-      VALUES (?,?,?)
+      VALUES (?,?,?,?)
     `)
 
     get_currencies = database.prepare(`
@@ -179,7 +180,7 @@ const db = {
 
   insert_rtx: (rx_id, tx_id) => insert_rtx.run(rx_id, tx_id),
 
-  insert_posting: (amount, account, tx_id) => insert_posting.run(amount, account, tx_id),
+  insert_posting: (amount, account, tx_id, cur_id) => insert_posting.run(amount, account, tx_id, cur_id),
 
   transactions: () => {
     return get_transactions_by_date.all()

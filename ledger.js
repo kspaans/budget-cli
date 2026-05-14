@@ -22,11 +22,14 @@ const a2tx = (tx) => {
     tx_currency_code = currency_result.cur_code
   }
 
+  const tx_postings = db.db.postings_for_tx(tx.tx_id)
   // if there is no credit column, then it's a split posting
   // TODO migrate older txs to tx + postings
   let credit_lines = ''
   if (tx.tx_credit === null) {
-    for (const p of db.db.postings_for_tx(tx.tx_id)) {
+    for (const p of tx_postings) {
+      // TODO backstop to the tx currency code until I've migrated data
+      tx_currency_code = db.db.currency_code(p.cur_id)?.cur_code || tx_currency_code
       credit_lines += `  ${p.pst_account}${String(Number(p.pst_amount).toFixed(2)).padStart(config.amount_padding - p.pst_account.length, ' ')} ${tx_currency_code}\n`
     }
   } else {
@@ -35,12 +38,15 @@ const a2tx = (tx) => {
       .padStart(config.amount_padding - tx.tx_credit.length, ' ') +
       ' ' + tx_currency_code + '\n'
   }
-  const debit_string =  String(     (-tx.tx_amount).toFixed(2))
-    .padStart(config.amount_padding - tx.tx_debit.length,  ' ')
+  // if it's an exchange tx, the debit is handled above
+  let debit_account_string = ''
+  if (tx.tx_debit !== null) {
+    debit_account_string = String((-tx.tx_amount).toFixed(2)).padStart(config.amount_padding - tx.tx_debit.length, ' ')
+  }
   // TODO handle recurring txs
   return `${tx.tx_date} ${tx.tx_posted ? '*' : ' '} ${tx.tx_payee}\n` +
-    credit_lines +
-    `  ${tx.tx_debit}${debit_string} ${tx_currency_code}\n`
+    credit_lines + (debit_account_string ?
+    `  ${tx.tx_debit}${debit_account_string} ${tx_currency_code}\n` : '')
 }
 
 const output_txs_to_ledger = () => {
