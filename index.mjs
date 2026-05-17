@@ -36,7 +36,7 @@
 //   - [ ] select currency for loan
 //   - [ ] select currency for recurring tx
 // - [X] add extra account for wise
-// - [ ] support FX for converting between currencies
+// - [X] support FX for converting between currencies
 
 // TODO CC creation (billing dates, credit, maybe reoncile bills)
 // TODO track CC available-credit

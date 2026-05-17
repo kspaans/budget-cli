@@ -14,6 +14,7 @@ const config = {
 }
 
 const a2tx = (tx) => {
+  // TODO remove after data migration
   // handle missing currency while migrating all tx to use cur_id: default to
   // CAD
   let tx_currency_code = 'CAD'
@@ -29,8 +30,15 @@ const a2tx = (tx) => {
   if (tx.tx_credit === null) {
     for (const p of tx_postings) {
       // TODO backstop to the tx currency code until I've migrated data
-      tx_currency_code = db.db.currency_code(p.cur_id)?.cur_code || tx_currency_code
-      credit_lines += `  ${p.pst_account}${String(Number(p.pst_amount).toFixed(2)).padStart(config.amount_padding - p.pst_account.length, ' ')} ${tx_currency_code}\n`
+      const posting_currency_code = db.db.currency_code(p.cur_id)?.cur_code ||
+        tx_currency_code
+      // detect a currency exchange transaction, and add the exchange rate to
+      // the posting line for strict&pendantic mode in Ledger
+      // if (tx.cur_id === null)
+      const space_padded_amount = String(
+        Number(p.pst_amount).toFixed(2)
+      ).padStart(config.amount_padding - p.pst_account.length, ' ')
+      credit_lines += `  ${p.pst_account}${space_padded_amount} ${posting_currency_code}\n`
     }
   } else {
     credit_lines = '  ' + tx.tx_credit +
