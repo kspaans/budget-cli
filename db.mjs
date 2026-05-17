@@ -15,6 +15,7 @@ let get_transactions_by_date
 let get_postings_by_tx_id
 let get_recurring
 let set_default_currency
+let set_tx_posted
 
 const db = {
   init_db: (note) => {
@@ -170,6 +171,12 @@ const db = {
       UPDATE default_currency
       SET cur_id = ?
     `)
+
+    set_tx_posted = database.prepare(`
+      UPDATE transactions
+      SET tx_posted = ?
+      WHERE tx_id = ?
+    `)
   },
 
   exec: (query) => database.exec(query),
@@ -215,6 +222,10 @@ const db = {
     if (isDefault) {
       set_default_currency.run(cur_id)
     }
+  },
+
+  mark_tx_as_posted: (isPosted, tx_id) => {
+    return set_tx_posted.run(isPosted, tx_id)
   },
 }
 

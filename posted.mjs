@@ -27,8 +27,7 @@ const posted = async (db) => {
       cancel('Ok, leaving for now')
       break
     }
-    // TODO DB query to set TX flag
-    tx.isPosted = value === 'p'
+    db.mark_tx_as_posted(value === 'p' ? 1 : 0, tx.tx_id)
     i += 1
   }
 }

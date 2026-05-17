@@ -1,6 +1,5 @@
 // BUGS
 // - [ ] null/0-len payee name crashes app
-// - [ ] marking transactions as posted isn't recording in the DB
 // - [ ] SQLite param 5 when inserting recurring txns that are split
 // - [ ] pressing enter instead of `e` to enter an expense crashes
 // - [ ] can't use true/false in selectKey()?
