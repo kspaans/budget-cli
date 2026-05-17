@@ -38,8 +38,10 @@ const expense = async (db, config) => {
       // use BigInt type to force integer arithmetic using cents
       let remaining_cents = BigInt(Math.round(amount*100))
       while (remaining_cents > 0) {
+        const whole_dollars = remaining_cents / 100n
+        const padded_cents = String(remaining_cents % 100n).padStart(2, '0')
         const split_amount_dollars = await text({
-          message: `You have ${remaining_cents / 100n}.${remaining_cents % 100n} left to split, how much would you like to split now?`,
+          message: `You have ${whole_dollars}.${padded_cents} left to split, how much would you like to split now?`,
           placeholder: '12.34',
           validate: (value) => {
             const num_dollar = Number(value)
@@ -48,7 +50,7 @@ const expense = async (db, config) => {
             }
             const num_cents = BigInt(Math.round(num_dollar*100))
             if (num_cents > remaining_cents ) {
-              return `Amount ${num_dollar} is larger than remaining left to split: ${remaining_cents / 100n}.${remaining_cents % 100n}. Please give a smaller amount.`
+              return `Amount ${num_dollar} is larger than remaining left to split: ${remaining_cents / 100n}.${String(remaining_cents % 100n).padStart(2, '0')}. Please give a smaller amount.`
             }
           }
         })
