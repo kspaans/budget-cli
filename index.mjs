@@ -100,20 +100,20 @@ async function main_loop() {
       message: 'What do you want to do?',
       initialValue: 'e',
       options: [
-        { key: '_', value: '_', label: 'I\'m not sure what to do...', hint: 'We can help!' },
-        { key: 'e', value: 'e', label: 'Enter an expense', hint: 'e' },
-        { key: 'm', value: 'm', label: 'Monthly dashboard' },
-        { key: 'l', value: 'l', label: 'Loan someone money', hint: 'l' },
-        { key: 'r', value: 'r', label: 'Reconcile CSV' },
-        { key: 'c', value: 'c', label: 'Credit Card Statement' },
-        { key: 'u', value: 'u', label: 'stuff Recurring Transactions stuff...' },
-        { key: 'i', value: 'i', label: 'Record Income' },
-        { key: 'p', value: 'p', label: 'Mark transactions as Posted' },
-        { key: 'o', value: 'o', label: 'Add or Adjust Opening Balances' },
-        { key: 't', value: 't', label: 'Transfer balances between accounts' },
-        { key: 'y', value: 'y', label: 'Manage currencies' },
-        { key: 'q', value: 'q', label: 'Exit', hint: 'niiiiice work' },
-        { key: 'z', value: 'z', label: 'Playground', hint: 'testing clack prompts: auto, flexible tx' },
+        { value: '_', label: 'I\'m not sure what to do...', hint: 'We can help!' },
+        { value: 'e', label: 'Enter an expense', hint: 'e' },
+        { value: 'm', label: 'Monthly dashboard' },
+        { value: 'l', label: 'Loan someone money', hint: 'l' },
+        { value: 'r', label: 'Reconcile CSV' },
+        { value: 'c', label: 'Credit Card Statement' },
+        { value: 'u', label: 'stuff Recurring Transactions stuff...' },
+        { value: 'i', label: 'Record Income' },
+        { value: 'p', label: 'Mark transactions as Posted' },
+        { value: 'o', label: 'Add or Adjust Opening Balances' },
+        { value: 't', label: 'Transfer balances between accounts' },
+        { value: 'y', label: 'Manage currencies' },
+        { value: 'q', label: 'Exit', hint: 'niiiiice work' },
+        { value: 'z', label: 'Playground', hint: 'testing clack prompts: auto, flexible tx' },
       ],
     });
 
@@ -154,17 +154,18 @@ async function main_loop() {
             options: config.expense_accounts,
             validate: (a) => {
               if (a === undefined) 'You must choose an account, or Ctrl-C to cancel'
+              return ''
             }
           })
           if (isCancel(account)) { cancel('cancelling!'); break }
 
-          const amount = await amount_prompt('How much?')
+          const amount = Number(await amount_prompt('How much?'))
           const posting_cents = BigInt(Math.round(amount*100))
           tx_amount_cents += posting_cents
           db.db.insert_posting(account, amount, tx_id, cur_id)
 
           const proceed = await confirm({ message: 'Add another?' })
-          if (!proceed || proceed === 'n') {
+          if (!proceed) {
             break
           }
         }
@@ -178,6 +179,7 @@ async function main_loop() {
           placeholder: `-${decimal}`,
           validate: (value) => {
             if (!value) 'Please enter an amount'
+            return ''
           }
         })
         if (isCancel(final_amount)) { cancel('cancelling!'); break }
@@ -187,6 +189,7 @@ async function main_loop() {
           options: config.asset_accounts.concat({ value: 'CC', label: 'Credit Card' }),
           validate: (a) => {
             if (a === undefined) 'You must choose an account, or Ctrl-C to cancel'
+            return ''
           }
         })
         if (isCancel(account)) { cancel('cancelling!'); break }
@@ -225,7 +228,7 @@ async function main_loop() {
           break
         }
 
-        const amount = await amount_prompt('OK, what\'s the amount?')
+        const amount = Number(await amount_prompt('OK, what\'s the amount?'))
 
         // TODO: use `select()` with a pre-defined or dynamic list
         const loanee = await text({
@@ -249,8 +252,8 @@ async function main_loop() {
           })
         }
 
-        const payee = loanee
-        const expense_cat = `Liabilities:${loanee}`
+        const payee = String(loanee)
+        const expense_cat = `Liabilities:${String(loanee)}`
         db.db.insert_tx(date, payee, expense_cat, debit_cat, amount, 1)
 
         const credit_string = String(amount).padStart(56 - expense_cat.length, ' ')
@@ -324,8 +327,9 @@ async function main_loop() {
           placeholder: "work",
           validate: (value) => {
             if (value.length === 0) {
-               'Please enter a payee name.'
+               return 'Please enter a payee name.'
             }
+            return ''
           }
         })
 

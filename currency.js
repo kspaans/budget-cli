@@ -9,11 +9,11 @@ const currency = async (db, config) => {
     message: 'What do you want to do?',
     initialValue: 'l',
     options: [
-      { key: 'l', value: 'l', label: 'List Currencies' },
-      { key: 'a', value: 'a', label: 'Add Currency' },
-      { key: 'e', value: 'e', label: 'Exchange Currency' },
-      { key: 'd', value: 'd', label: 'Set default currency' },
-      { key: 'q', value: 'q', label: 'Quit', hint: 'go back' },
+      { value: 'l', label: 'List Currencies' },
+      { value: 'a', label: 'Add Currency' },
+      { value: 'e', label: 'Exchange Currency' },
+      { value: 'd', label: 'Set default currency' },
+      { value: 'q', label: 'Quit', hint: 'go back' },
     ],
   });
 
@@ -58,8 +58,9 @@ const add = async (db) => {
     placeholder: "Canadian Dollar",
     validate: (value) => {
       if (value.length === 0) {
-         'Please enter a currency name.'
+         return 'Please enter a currency name.'
       }
+      return ''
     }
   })
 

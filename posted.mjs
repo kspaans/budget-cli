@@ -4,7 +4,7 @@ import { date_prompt } from './lib.js'
 
 const posted = async (db) => {
   note('Mark transactions as posted or not.')
-  const start = await date_prompt('Which transaction date should start looking at?')
+  const start = String(await date_prompt('Which transaction date should start looking at?'))
   const txs = db.transactions()
   const l = txs.length
   let i = 1
@@ -17,9 +17,9 @@ const posted = async (db) => {
     const value = await selectKey({
       message: `(${i}/${l}) ${tx.tx_posted ? 'POSTED' : ''} ${tx.tx_date}: $${tx.tx_amount} - ${tx.tx_payee} - ${tx.tx_debit} ?`,
       options: [
-        { key: 'p', value: 'p', label: 'Posted' },
-        { key: 'n', value: 'n', label: 'Not Posted' },
-        { key: 'q', value: 'q', label: 'Done' },
+        { value: 'p', label: 'Posted' },
+        { value: 'n', label: 'Not Posted' },
+        { value: 'q', label: 'Done' },
       ],
     })
 

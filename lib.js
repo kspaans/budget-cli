@@ -3,15 +3,19 @@ import { select, text } from '@clack/prompts'
 import db from './db.mjs'
 
 // returns decimal "dollars"
+/**
+ * @return number
+ */
 const amount_prompt = async (message) => {
   return text({
     message,
     placeholder: "12.34",
     validate: (value) => {
       const num = Number(value)
-      if (isNaN(value) || typeof value === 'undefined' || value === '') {
+      if (typeof value === 'undefined' || isNaN(num) || value === '') {
         return 'Please enter a number.'
       }
+      return ''
     }
   })
 }
@@ -29,6 +33,9 @@ const currency_prompt = async(message) => {
   })
 }
 
+/**
+ * @returns string
+ */
 const date_prompt = async (message) => {
   return await text({
     message,
@@ -39,9 +46,10 @@ const date_prompt = async (message) => {
         return 'Please enter a date.'
       }
       const result = Date.parse(d)
-      if (isNaN(result) || result === 'Invalid Date') {
+      if (isNaN(result)) {
         return 'Please enter a valid date in YYYY-MM-DD format.'
       }
+      return ''
     }
   })
 }

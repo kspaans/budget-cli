@@ -17,13 +17,13 @@ const recurring = async (db) => {
   const task = await selectKey({
     message: 'What do you want to do?',
     options: [
-      { key: 'v', value: 'v', label: 'View recurring transactions' },
+      { value: 'v', label: 'View recurring transactions' },
       // will fill up transactions between the start date and last dated txns in
       // the ledger, so to extend recurring txns into the future, add more
       // non-recurring
-      { key: 'r', value: 'r', label: 'Reconcile transactions' }, // e.g. modify date due to holiday/weekend
-      { key: 'e', value: 'e', label: 'Extend recurrences into the future' }, // TODO, maybe unnecessary?
-      { key: 'q', value: 'q', label: 'Go back' },
+      { value: 'r', label: 'Reconcile transactions' }, // e.g. modify date due to holiday/weekend
+      { value: 'e', label: 'Extend recurrences into the future' }, // TODO, maybe unnecessary?
+      { value: 'q', label: 'Go back' },
     ],
   });
 
@@ -60,8 +60,8 @@ const recurring = async (db) => {
           const value = await selectKey({
             message: `$${rtx.rx_date} - ${rtx.rx_payee} - ${rtx.rx_debit} ?`,
             options: [
-              { key: 'y', value: 'y', label: 'Yes' },
-              { key: 'n', value: 'n', label: 'No' }
+              { value: 'y', label: 'Yes' },
+              { value: 'n', label: 'No' }
             ],
           })
           if (isCancel(value)) {
@@ -114,8 +114,8 @@ const recurring = async (db) => {
                 const p = await selectKey({
                   message: `Post/unpost this transaction? $${t.tx_date} - ${t.tx_payee} - ${t.tx_debit} - ${t.tx_posted ? '' : 'not'}posted?`,
                   options: [
-                    { key: 'y', value: 'y', label: 'Yes' },
-                    { key: 'n', value: 'n', label: 'No' }
+                    { value: 'y', label: 'Yes' },
+                    { value: 'n', label: 'No' }
                   ],
                 })
                 t.isPosted = p === 'y'

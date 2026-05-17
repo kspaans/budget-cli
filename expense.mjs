@@ -11,7 +11,7 @@ const expense = async (db, config) => {
       break
     }
 
-    const amount = await amount_prompt('OK, what\'s the amount?')
+    const amount = Number(await amount_prompt('OK, what\'s the amount?'))
 
     const cur_id = await currency_prompt('Which currency did the expense use?')
     if (isCancel(cur_id)) {
@@ -40,12 +40,12 @@ const expense = async (db, config) => {
       while (remaining_cents > 0) {
         const whole_dollars = remaining_cents / 100n
         const padded_cents = String(remaining_cents % 100n).padStart(2, '0')
-        const split_amount_dollars = await text({
+        const split_amount_dollars = Number(await text({
           message: `You have ${whole_dollars}.${padded_cents} left to split, how much would you like to split now?`,
           placeholder: '12.34',
           validate: (value) => {
             const num_dollar = Number(value)
-            if (isNaN(value) || typeof value === 'undefined' || value === '') {
+            if (isNaN(num_dollar) || typeof value === 'undefined' || value === '') {
               return 'Please enter a number.'
             }
             const num_cents = BigInt(Math.round(num_dollar*100))
@@ -53,7 +53,7 @@ const expense = async (db, config) => {
               return `Amount ${num_dollar} is larger than remaining left to split: ${remaining_cents / 100n}.${String(remaining_cents % 100n).padStart(2, '0')}. Please give a smaller amount.`
             }
           }
-        })
+        }))
         expense_cat = await autocomplete({
           message: `How should this be categorized?`,
           options: config.expense_accounts
@@ -88,8 +88,9 @@ const expense = async (db, config) => {
       placeholder: "Bob's Burgers",
       validate: (value) => {
         if (!value || value.length === 0) {
-           'Please enter a payee name.'
+           return 'Please enter a payee name.'
         }
+        return ''
       }
     })
 
@@ -111,11 +112,11 @@ const expense = async (db, config) => {
       const frequency = await selectKey({
         message: 'How often is it recurring?',
         options: [
-          { key: 'm', value: 'm', label: 'Monthly' },
-          { key: 'b', value: 'b', label: 'Bi-Weekly (every two weeks)' },
-          { key: 'w', value: 'w', label: 'Weekly' },
-          { key: 'a', value: 'a', label: 'Annually' },
-          { key: 't', value: 't', label: 'Bi-Monthly (twice a month)' },
+          { value: 'm', label: 'Monthly' },
+          { value: 'b', label: 'Bi-Weekly (every two weeks)' },
+          { value: 'w', label: 'Weekly' },
+          { value: 'a', label: 'Annually' },
+          { value: 't', label: 'Bi-Monthly (twice a month)' },
         ]
       })
       const ruuid = crypto.randomUUID()
