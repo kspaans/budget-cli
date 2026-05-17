@@ -1,7 +1,12 @@
 import { autocomplete, cancel, isCancel, select, selectKey, text } from '@clack/prompts'
 
+import Database from './db.mjs'
 import { amount_prompt, currency_prompt, date_prompt } from './lib.js'
 
+/**
+ * @param db {Database}
+ * @param config {Object}
+ */
 const expense = async (db, config) => {
   while (true) {
     const date = await date_prompt('When did/will the expense occur?')
@@ -13,7 +18,7 @@ const expense = async (db, config) => {
 
     const amount = Number(await amount_prompt('OK, what\'s the amount?'))
 
-    const cur_id = await currency_prompt('Which currency did the expense use?')
+    const cur_id = await currency_prompt(db, 'Which currency did the expense use?')
     if (isCancel(cur_id)) {
       cancel('Whoops, OK')
       break

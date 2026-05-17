@@ -1,13 +1,15 @@
 import { select, text } from '@clack/prompts'
 
-import db from './db.mjs'
+import Database from './db.mjs'
 
-// returns decimal "dollars"
 /**
- * @return number
+ * returns decimal "dollars"
+ *
+ * @param message {string}
+ * @returns {Promise<number>}
  */
 const amount_prompt = async (message) => {
-  return text({
+  return Number(await text({
     message,
     placeholder: "12.34",
     validate: (value) => {
@@ -17,27 +19,38 @@ const amount_prompt = async (message) => {
       }
       return ''
     }
-  })
+  }))
 }
 
-const currency_prompt = async(message) => {
-  const currencies = db.db.currencies().map(c => {
+
+/**
+ * @param db {Database}
+ * @param message {string}
+ * @returns {Promise<number>}
+ */
+const currency_prompt = async(db, message) => {
+  /**
+   * @param c {Currency}
+   */
+  const make_currency_option = (c) => {
     return {
       value: c.cur_id,
       label: `${c.cur_code} (${c.cur_name})`,
     }
-  })
-  return await select({
+  }
+  const currencies = db.currencies().map(make_currency_option)
+  return Number(await select({
     message,
     options: currencies
-  })
+  }))
 }
 
 /**
- * @returns string
+ * @param message {string}
+ * @returns {Promise<string>}
  */
 const date_prompt = async (message) => {
-  return await text({
+  return String(await text({
     message,
     placeholder: (new Date()).toLocaleDateString(),
     initialValue: (new Date()).toLocaleDateString(),
@@ -51,7 +64,7 @@ const date_prompt = async (message) => {
       }
       return ''
     }
-  })
+  }))
 }
 
 export {

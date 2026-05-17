@@ -1,7 +1,12 @@
 import { autocomplete, cancel, isCancel, note, selectKey, select, text } from '@clack/prompts'
 
+import Database from './db.js'
 import { amount_prompt, currency_prompt, date_prompt } from './lib.js'
 
+/**
+ * @param db {Database}
+ * @param config {Function}
+ */
 const currency = async (db, config) => {
   note('See your currencies, and add new ones')
 
@@ -35,6 +40,10 @@ const currency = async (db, config) => {
   }
 }
 
+
+/**
+ * @param db {Object}
+ */
 const add = async (db) => {
   const code = await text({
     message: 'What is the code of the new currency?',
@@ -85,6 +94,11 @@ const add = async (db) => {
   return
 }
 
+
+/**
+ * @param db {Object}
+ * @param config {Object}
+ */
 const exchange = async (db, config) => {
   const date = await date_prompt('When does the exchange happen?')
 
@@ -136,6 +150,10 @@ const exchange = async (db, config) => {
   return
 }
 
+
+/**
+ * @param db {Object}
+ */
 const list = async (db) => {
   const currencies = db.currencies()
   if (currencies.length === 0) {

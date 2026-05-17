@@ -101,6 +101,10 @@ const script = `
 </script>
 `
 
+/**
+ * @param tx {Transaction}
+ * @param i {string}
+ */
 const make_tx_row = (tx, i) => {
   let credit_rows = ''
   if (tx.tx_credit !== null) {
@@ -146,8 +150,15 @@ const make_tx_row = (tx, i) => {
   `
 }
 
+/**
+ * @param transactions {Array<{tx_id: number}>}
+ */
 const server = async (transactions) => {
-  const handler = (req, res) => {
+  /**
+   * @param _ {IncomingMessage}
+   * @param res {Response}
+   */
+  const handler = (_, res) => {
     res.writeHead(200, {'Content-Type': 'text/HTML'})
 
     const table = () => {

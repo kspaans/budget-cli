@@ -1,7 +1,11 @@
 import { cancel, isCancel, note, selectKey } from '@clack/prompts'
 
+import Database from './db.mjs'
 import { date_prompt } from './lib.js'
 
+/**
+ * @param db {Database}
+ */
 const posted = async (db) => {
   note('Mark transactions as posted or not.')
   const start = String(await date_prompt('Which transaction date should start looking at?'))

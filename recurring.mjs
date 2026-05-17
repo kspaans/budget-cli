@@ -1,5 +1,7 @@
 import { cancel, isCancel, note, selectKey } from '@clack/prompts'
 
+import Database from './db.mjs'
+
 const rmap = {
   a: '; :recurring: annually',
   m: '; :recurring: monthly',
@@ -13,6 +15,9 @@ const rmap_human = {
   w: 'weekly',
 }
 
+/**
+ * @param db {Database}
+ */
 const recurring = async (db) => {
   const task = await selectKey({
     message: 'What do you want to do?',

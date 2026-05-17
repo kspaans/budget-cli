@@ -48,12 +48,12 @@
 // TODO normalize payee, accounts
 // TODO comments on transactions
 
-import { autocomplete, intro, cancel, confirm, isCancel, log, note, outro, select, selectKey, text } from '@clack/prompts';
+import { autocomplete, intro, cancel, confirm, isCancel, log, note, outro, select, selectKey, text } from '@clack/prompts'
 import fs from 'node:fs'
 
 import { amount_prompt, currency_prompt, date_prompt } from './lib.js'
 import currency from './currency.js'
-import db from './db.mjs'
+import Database from './db.mjs'
 import { expense } from './expense.mjs'
 import { output_txs_to_ledger as quit } from './ledger.js'
 import posted from './posted.mjs'
@@ -70,7 +70,7 @@ const config = {
 
 intro(`LEDGER INTERACTIVE ACCOUNTING`);
 
-db.db.init_db(note)
+const db = new Database()
 
 try {
   data = fs.readFileSync('./.accounts.json', { encoding: 'utf8' })
@@ -91,7 +91,7 @@ try {
 
 async function main_loop() {
   note(`Running website check out http://localhost:8888/`)
-  await web.server(db.db.transactions())
+  await web.server(db.transactions())
   while (true) {
     const projectType = await selectKey({
       message: 'What do you want to do?',
@@ -116,7 +116,7 @@ async function main_loop() {
 
     switch (projectType) {
       case 'q':
-        quit()
+        quit(db)
         outro(`You're all set!`);
         process.exit(0)
 
@@ -136,12 +136,12 @@ async function main_loop() {
         })
         if (isCancel(payee)) { cancel('cancelling!'); break }
 
-        db.db.exec(`BEGIN TRANSACTION`)
+        db.exec(`BEGIN TRANSACTION`)
         //                                       credit  debit  amt    cur_id
-        const tx_id = db.db.insert_tx(date, payee, null, null, null, 0, null).lastInsertRowid
+        const tx_id = db.insert_tx(date, payee, null, null, null, 0, null).lastInsertRowid
 
         // support just a single currency for now, for ease of balancing
-        const cur_id = await currency_prompt('Which currency should this transaction use?')
+        const cur_id = await currency_prompt(db, 'Which currency should this transaction use?')
         if (isCancel(cur_id)) { cancel('cancelling!'); break }
 
         let tx_amount_cents = 0n
@@ -160,7 +160,7 @@ async function main_loop() {
           const amount = Number(await amount_prompt('How much?'))
           const posting_cents = BigInt(Math.round(amount*100))
           tx_amount_cents += posting_cents
-          db.db.insert_posting(account, amount, tx_id, cur_id)
+          db.insert_posting(account, amount, tx_id, cur_id)
 
           const proceed = await confirm({ message: 'Add another?' })
           if (!proceed) {
@@ -172,14 +172,14 @@ async function main_loop() {
         const c = String(tx_amount_cents % 100n).padStart(2, '0')
         const decimal = `${d}.${c}`
         note(`Great, now we're ready to finalize the transaction. You have ${decimal} in transactions.\nIt is HIGHLY recommended to balance this amount.`)
-        const final_amount = await text({
+        const final_amount = Number(await text({
           message: 'Amout to finalize?',
           placeholder: `-${decimal}`,
           validate: (value) => {
             if (!value) 'Please enter an amount'
             return ''
           }
-        })
+        }))
         if (isCancel(final_amount)) { cancel('cancelling!'); break }
 
         const account = await autocomplete({
@@ -191,9 +191,9 @@ async function main_loop() {
           }
         })
         if (isCancel(account)) { cancel('cancelling!'); break }
-        db.db.insert_posting(final_amount, account, tx_id, cur_id)
+        db.insert_posting(final_amount, account, tx_id, cur_id)
 
-        db.db.exec(`COMMIT`)
+        db.exec(`COMMIT`)
 
         // can we have autocomplete AND manual entry if necessary
         const a = await autocomplete({
@@ -210,11 +210,11 @@ async function main_loop() {
         break
 
       case 'y':
-        await currency(db.db, config)
+        await currency(db, config)
         break
 
       case 'e': {
-        await expense(db.db, config)
+        await expense(db, config)
         break
       }
 
@@ -250,10 +250,12 @@ async function main_loop() {
             options: config.liability_accounts,
           }))
         }
+        
+        const cur_id = await currency_prompt(db, 'Which currency?')
 
         const payee = String(loanee)
         const expense_cat = `Liabilities:${String(loanee)}`
-        db.db.insert_tx(date, payee, expense_cat, debit_cat, amount, 1)
+        db.insert_tx(date, payee, expense_cat, debit_cat, amount, 1, cur_id)
 
         const credit_string = String(amount).padStart(56 - expense_cat.length, ' ')
         const debit_string = String(-amount).padStart(56 - debit_cat.length, ' ')
@@ -280,7 +282,7 @@ async function main_loop() {
 
         if (isCancel(prev_bal)) {
           cancel('Whoops, OK')
-          quit()
+          quit(db)
           process.exit(0)
         }
 
@@ -291,12 +293,12 @@ async function main_loop() {
       }
 
       case 'p': {
-        await posted.posted(db.db)
+        await posted.posted(db)
         break;
       }
 
       case 'u': {
-        await recurring.recurring(db.db)
+        await recurring.recurring(db)
         break;
       }
 
@@ -305,7 +307,7 @@ async function main_loop() {
 
         if (isCancel(date)) {
           cancel('Ok, leaving for now')
-          quit()
+          quit(db)
           process.exit(0)
         }
 
@@ -321,7 +323,7 @@ async function main_loop() {
             options: config.asset_accounts,
           })
 
-        const payee = await text({
+        const payee = String(await text({
           message: 'Who paid you?',
           placeholder: "work",
           validate: (value) => {
@@ -330,17 +332,19 @@ async function main_loop() {
             }
             return ''
           }
-        })
+        }))
 
-        db.db.insert_tx(date, payee, credit_cat, income_cat, amount, 0)
+        const cur_id = await currency_prompt(db, 'Which currency?')
+
+        db.insert_tx(date, payee, credit_cat, income_cat, amount, 0, cur_id)
 
         if (isCancel(income_cat)) {
           cancel('Ok, leaving for now')
-          quit()
+          quit(db)
           process.exit(0)
         }
 
-        quit()
+        quit(db)
         break;
       }
 
@@ -357,10 +361,12 @@ async function main_loop() {
 
         const amount = await amount_prompt('OK, what\'s the amount?')
 
-        // TODO convert amount to an integer
-        db.db.insert_tx(date, payee, asset, debit_cat, amount, 1)
+        const cur_id = await currency_prompt(db, 'Which currency?')
 
-        quit()
+        // TODO convert amount to an integer
+        db.insert_tx(date, payee, asset, debit_cat, amount, 1, cur_id)
+
+        quit(db)
         break;
       }
     }
@@ -384,14 +390,14 @@ async function transfer() {
 
   const amount = await amount_prompt('OK, what\'s the amount?')
 
-  const cur_id = await currency_prompt('Which currency was transfered?')
+  const cur_id = await currency_prompt(db, 'Which currency was transfered?')
 
   const debit = await select({
     message: 'Where did the transfer come from?',
     options: config.asset_accounts,
   })
 
-  db.db.insert_tx(date, payee, asset, debit, amount, 1, cur_id)
+  db.insert_tx(date, payee, asset, debit, amount, 1, cur_id)
 }
 
 main_loop()
