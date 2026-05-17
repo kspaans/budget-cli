@@ -17,12 +17,6 @@
 // - [ ] edit transactions
 //   - [ ] modify date of tx
 // - [ ] refunds/misc income that's balanced against a different account
-// - [ ] alt posting workflow that's more free to select which debit and credit accounts
-//   - pick debit account
-//   - pick credit account
-//   - amount
-//   - repeat until all postings done
-//   - balance check of all postings
 // - [ ] make web postings background be proportional to the size of the credit
 //   relative to the whole transaction
 // - [ ] don't DI config, move it to a module, or put accounts in DB
@@ -54,7 +48,7 @@
 // TODO normalize payee, accounts
 // TODO comments on transactions
 
-import { autocomplete, intro, cancel, isCancel, log, note, outro, select, selectKey, text } from '@clack/prompts';
+import { autocomplete, intro, cancel, confirm, isCancel, log, note, outro, select, selectKey, text } from '@clack/prompts';
 import fs from 'node:fs'
 import { setTimeout } from 'node:timers/promises'
 
@@ -102,12 +96,13 @@ async function main_loop() {
   note(`Running website check out http://localhost:8888/`)
   const w = await web.server(db.db.transactions())
   while (true) {
-    const projectType = await selectKey({ // maybe try `select()` instead so enter works?
+    const projectType = await selectKey({
       message: 'What do you want to do?',
       initialValue: 'e',
       options: [
         { key: '_', value: '_', label: 'I\'m not sure what to do...', hint: 'We can help!' },
         { key: 'e', value: 'e', label: 'Enter an expense', hint: 'e' },
+        { key: 'm', value: 'm', label: 'Monthly dashboard' },
         { key: 'l', value: 'l', label: 'Loan someone money', hint: 'l' },
         { key: 'r', value: 'r', label: 'Reconcile CSV' },
         { key: 'c', value: 'c', label: 'Credit Card Statement' },
@@ -118,6 +113,7 @@ async function main_loop() {
         { key: 't', value: 't', label: 'Transfer balances between accounts' },
         { key: 'y', value: 'y', label: 'Manage currencies' },
         { key: 'q', value: 'q', label: 'Exit', hint: 'niiiiice work' },
+        { key: 'z', value: 'z', label: 'Playground', hint: 'testing clack prompts: auto, flexible tx' },
       ],
     });
 
@@ -126,6 +122,86 @@ async function main_loop() {
         quit()
         outro(`You're all set!`);
         process.exit(0)
+
+      case 'z': {
+        const date = await date_prompt('This will be a generic transaction entry flow, what is the date?')
+        if (isCancel(date)) { cancel('cancelling!'); break }
+
+        const payee = await text({
+          message: 'Who is the payee or business?',
+          placeholder: `Bob's Burgers`,
+          validate: (value) => {
+            if (!value || value.length === 0) {
+              return 'Please enter a name at least 1 character long.'
+            }
+          }
+        })
+        if (isCancel(payee)) { cancel('cancelling!'); break }
+
+        db.db.exec(`BEGIN TRANSACTION`)
+        //                                       credit  debit  amt    cur_id
+        const tx_id = db.db.insert_tx(date, payee, null, null, null, 0, null).lastInsertRowid
+
+        // support just a single currency for now, for ease of balancing
+        const cur_id = await currency_prompt('Which currency should this transaction use?')
+        if (isCancel(cur_id)) { cancel('cancelling!'); break }
+
+        let tx_amount_cents = 0n
+        note('We will now start adding postings to the transaction...')
+        while (true) {
+          const account = await autocomplete({
+            message: 'Choose an account',
+            options: config.expense_accounts,
+            validate: (a) => {
+              if (a === undefined) 'You must choose an account, or Ctrl-C to cancel'
+            }
+          })
+          if (isCancel(account)) { cancel('cancelling!'); break }
+
+          const amount = await amount_prompt('How much?')
+          const posting_cents = BigInt(Math.round(amount*100))
+          tx_amount_cents += posting_cents
+          db.db.insert_posting(account, amount, tx_id, cur_id)
+
+          const proceed = await confirm({ message: 'Add another?' })
+          if (!proceed || proceed === 'n') {
+            break
+          }
+        }
+
+        const d = tx_amount_cents / 100n
+        const c = String(tx_amount_cents % 100n).padStart(2, '0')
+        const decimal = `${d}.${c}`
+        note(`Great, now we're ready to finalize the transaction. You have ${decimal} in transactions.\nIt is HIGHLY recommended to balance this amount.`)
+        const final_amount = await text({
+          message: 'Amout to finalize?',
+          placeholder: `-${decimal}`,
+          validate: (value) => {
+            if (!value) 'Please enter an amount'
+          }
+        })
+        if (isCancel(final_amount)) { cancel('cancelling!'); break }
+
+        const account = await autocomplete({
+          message: 'Choose an account',
+          options: config.asset_accounts.concat({ value: 'CC', label: 'Credit Card' }),
+          validate: (a) => {
+            if (a === undefined) 'You must choose an account, or Ctrl-C to cancel'
+          }
+        })
+        if (isCancel(account)) { cancel('cancelling!'); break }
+        db.db.insert_posting(final_amount, account, tx_id, cur_id)
+
+        db.db.exec(`COMMIT`)
+
+        // can we have autocomplete AND manual entry if necessary
+        const a = await autocomplete({
+          message: ' this is just a test now hit ENTER or Choose an account',
+          options: config.expense_accounts,
+        })
+        note(`Great! You chose '${a}'`)
+        break
+      }
 
       case 't':
         // TODO what about a refund of medical expenses?
@@ -191,6 +267,11 @@ async function main_loop() {
 
         break
       }
+
+      case 'm':
+        note('Monthly dashboard')
+        // you have X transactions so far this month
+        break
 
       case 'c': {
         const prev_bal = await amount_prompt('What was the previous balance?')
