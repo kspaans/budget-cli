@@ -87,7 +87,7 @@ const expense = async (db, config) => {
       message: 'Payee?',
       placeholder: "Bob's Burgers",
       validate: (value) => {
-        if (value.length === 0) {
+        if (!value || value.length === 0) {
            'Please enter a payee name.'
         }
       }

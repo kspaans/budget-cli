@@ -1,13 +1,13 @@
 // BUGS
-// - [ ] null/0-len payee name crashes app
 // - [ ] SQLite param 5 when inserting recurring txns that are split
-// - [ ] pressing enter instead of `e` to enter an expense crashes
 // - [ ] can't use true/false in selectKey()?
 // - [ ] have list of payees so that payees can be linked, list/autocomplete
 //   for payee selection
 
 // TODO Workflows
 // - [ ] have log output for when transactions are saved
+// - [ ] multi-currency flexible tx workflow for when each posting is in a
+//   different currency and it isn't a simple exchange tx
 // - [ ] monthly balance, expenses for budgeting
 // - [ ] reconciliation
 // - [ ] create list of accounts
@@ -154,6 +154,11 @@ async function main_loop() {
         // TODO: use `select()` with a pre-defined or dynamic list
         const loanee = await text({
           message: `Who is the loan to?`,
+          validate: (value) => {
+            if (!value || value.length === 0) {
+              return 'Please enter a name.'
+            }
+          }
         })
 
         let debit_cat = await autocomplete({
