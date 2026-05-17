@@ -50,7 +50,6 @@
 
 import { autocomplete, intro, cancel, confirm, isCancel, log, note, outro, select, selectKey, text } from '@clack/prompts';
 import fs from 'node:fs'
-import { setTimeout } from 'node:timers/promises'
 
 import { amount_prompt, currency_prompt, date_prompt } from './lib.js'
 import currency from './currency.js'
@@ -68,8 +67,6 @@ const config = {
   asset_accounts: [],
   liability_accounts: [],
 }
-
-const tasks = []
 
 intro(`LEDGER INTERACTIVE ACCOUNTING`);
 
@@ -94,7 +91,7 @@ try {
 
 async function main_loop() {
   note(`Running website check out http://localhost:8888/`)
-  const w = await web.server(db.db.transactions())
+  await web.server(db.db.transactions())
   while (true) {
     const projectType = await selectKey({
       message: 'What do you want to do?',
@@ -134,6 +131,7 @@ async function main_loop() {
             if (!value || value.length === 0) {
               return 'Please enter a name at least 1 character long.'
             }
+            return ''
           }
         })
         if (isCancel(payee)) { cancel('cancelling!'); break }
@@ -186,7 +184,7 @@ async function main_loop() {
 
         const account = await autocomplete({
           message: 'Choose an account',
-          options: config.asset_accounts.concat({ value: 'CC', label: 'Credit Card' }),
+          options: [{ value: 'CC', label: 'Credit Card' }].concat(config.asset_accounts),
           validate: (a) => {
             if (a === undefined) 'You must choose an account, or Ctrl-C to cancel'
             return ''
@@ -237,19 +235,20 @@ async function main_loop() {
             if (!value || value.length === 0) {
               return 'Please enter a name.'
             }
+            return ''
           }
         })
 
-        let debit_cat = await autocomplete({
+        let debit_cat = String(await autocomplete({
           message: 'Debit from where?',
-          options: config.asset_accounts.concat({ value: 'CC', label: 'Credit Card' }),
-        })
+          options: [{ value: 'CC', label: 'Credit Card' }].concat(config.asset_accounts),
+        }))
 
         if (debit_cat === 'CC') {
-          debit_cat =  await select({
+          debit_cat =  String(await select({
             message: 'Which card?',
             options: config.liability_accounts,
-          })
+          }))
         }
 
         const payee = String(loanee)
@@ -285,9 +284,9 @@ async function main_loop() {
           process.exit(0)
         }
 
-        const curr_bal = await amount_prompt('What is the current balance?')
-        const min_pay = await amount_prompt('What is the minimum payment?')
-        const due = await date_prompt('When is the minimum payment due?')
+        //const curr_bal = await amount_prompt('What is the current balance?')
+        //const min_pay = await amount_prompt('What is the minimum payment?')
+        //const due = await date_prompt('When is the minimum payment due?')
         break
       }
 
@@ -306,8 +305,8 @@ async function main_loop() {
 
         if (isCancel(date)) {
           cancel('Ok, leaving for now')
-          process.exit(0)
           quit()
+          process.exit(0)
         }
 
         const amount = await amount_prompt('OK, what\'s the amount?')
@@ -326,7 +325,7 @@ async function main_loop() {
           message: 'Who paid you?',
           placeholder: "work",
           validate: (value) => {
-            if (value.length === 0) {
+            if (typeof value === 'undefined' || value.length === 0) {
                return 'Please enter a payee name.'
             }
             return ''
@@ -337,8 +336,8 @@ async function main_loop() {
 
         if (isCancel(income_cat)) {
           cancel('Ok, leaving for now')
-          process.exit(0)
           quit()
+          process.exit(0)
         }
 
         quit()

@@ -20,7 +20,7 @@ let set_tx_posted
 const db = {
   init_db: (note) => {
     database = new sqlite.DatabaseSync(DB_PATH)
-    const result = database.exec(`
+    database.exec(`
       PRAGMA foreign_keys = ON;
       CREATE TABLE IF NOT EXISTS transactions(
           tx_id INTEGER PRIMARY KEY AUTOINCREMENT

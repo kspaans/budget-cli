@@ -40,12 +40,13 @@ const add = async (db) => {
     message: 'What is the code of the new currency?',
     placeholder: "CAD",
     validate: (value) => {
-      if (value.length === 0) {
+      if (typeof value === 'undefined' || value.length === 0) {
         return 'Please enter a currency code.'
       }
       if (value.length !== 2) {
         return 'Currency code must be exactly 3 letters: `ABC`'
       }
+      return ''
     }
   })
 
@@ -57,7 +58,7 @@ const add = async (db) => {
     message: 'What is the name of the new currency?',
     placeholder: "Canadian Dollar",
     validate: (value) => {
-      if (value.length === 0) {
+      if (typeof value === 'undefined' || value.length === 0) {
          return 'Please enter a currency name.'
       }
       return ''

@@ -1,4 +1,4 @@
-import { autocomplete, cancel, isCancel, note, select, selectKey, text } from '@clack/prompts'
+import { autocomplete, cancel, isCancel, select, selectKey, text } from '@clack/prompts'
 
 import { amount_prompt, currency_prompt, date_prompt } from './lib.js'
 
@@ -52,6 +52,7 @@ const expense = async (db, config) => {
             if (num_cents > remaining_cents ) {
               return `Amount ${num_dollar} is larger than remaining left to split: ${remaining_cents / 100n}.${String(remaining_cents % 100n).padStart(2, '0')}. Please give a smaller amount.`
             }
+            return ''
           }
         }))
         expense_cat = await autocomplete({
