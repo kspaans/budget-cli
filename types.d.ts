@@ -16,9 +16,9 @@ type Transaction = {
   tx_id: number,
   tx_date: string,
   tx_payee: string,
-  tx_credit: string,
-  tx_debit: string,
-  tx_amount: number,
+  tx_credit: string?,
+  tx_debit: string?,
+  tx_amount: number?,
   tx_posted: boolean,
-  cur_id: number,
+  cur_id: number?,
 }

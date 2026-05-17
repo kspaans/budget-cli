@@ -178,7 +178,7 @@ export default class Database {
    * @param payee {String}
    * @param credit_cat {String?}
    * @param debit_cat {String?}
-   * @param amount {number}
+   * @param amount {number?}
    * @param posted {number}
    * @param currency_id {number?}
    */
@@ -242,6 +242,7 @@ export default class Database {
 
   /**
    * @param cur_id {number}
+   * @returns {{cur_count: number}}
    */
   count_currency(cur_id) {
     return this.count_currency_by_id.get(cur_id, cur_id)
@@ -262,6 +263,9 @@ export default class Database {
     return this.get_currency_code_by_id.get(cur_id)
   }
 
+  /**
+   * @returns {Currency}
+   */
   default_currency() {
     return this.get_default_currency.get()
   }

@@ -89,7 +89,7 @@ const expense = async (db, config) => {
       })
     }
 
-    const payee = await text({
+    const payee = String(await text({
       message: 'Payee?',
       placeholder: "Bob's Burgers",
       validate: (value) => {
@@ -98,7 +98,7 @@ const expense = async (db, config) => {
         }
         return ''
       }
-    })
+    }))
 
     // TODO try using confirm dialogue?
     const recurring = await select({
@@ -110,12 +110,12 @@ const expense = async (db, config) => {
     })
 
     db.exec(`BEGIN TRANSACTION`)
-    const tx_id = db.insert_tx(date, payee, null, debit_cat, amount, 0, cur_id).lastInsertRowid
+    const tx_id = Number(db.insert_tx(date, payee, null, debit_cat, amount, 0, cur_id).lastInsertRowid)
     for (const p of postings) {
       db.insert_posting(p[0], p[1], tx_id, cur_id)
     }
     if (recurring === 'y') {
-      const frequency = await selectKey({
+      const frequency = String(await selectKey({
         message: 'How often is it recurring?',
         options: [
           { value: 'm', label: 'Monthly' },
@@ -124,12 +124,12 @@ const expense = async (db, config) => {
           { value: 'a', label: 'Annually' },
           { value: 't', label: 'Bi-Monthly (twice a month)' },
         ]
-      })
+      }))
       const ruuid = crypto.randomUUID()
       // TODO convert amount to an integer
       // const int_amount = BigInt(Math.round(amount*100))
       // TODO when split, what should the expense category be for the recurring row?
-      const rx_id = db.insert_recurring(date, date, payee, amount, expense_cat, debit_cat, frequency, ruuid).lastInsertRowid
+      const rx_id = Number(db.insert_recurring(date, date, payee, amount, expense_cat, debit_cat, frequency, ruuid).lastInsertRowid)
       db.insert_rtx(rx_id, tx_id)
     }
     db.exec(`COMMIT`)

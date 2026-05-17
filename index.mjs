@@ -160,7 +160,7 @@ async function main_loop() {
           const amount = Number(await amount_prompt('How much?'))
           const posting_cents = BigInt(Math.round(amount*100))
           tx_amount_cents += posting_cents
-          db.insert_posting(account, amount, tx_id, cur_id)
+          db.insert_posting(amount, account, tx_id, cur_id)
 
           const proceed = await confirm({ message: 'Add another?' })
           if (!proceed) {
