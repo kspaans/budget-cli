@@ -91,7 +91,7 @@ try {
 
 async function main_loop() {
   note(`Running website check out http://localhost:8888/`)
-  await web.server(db.transactions())
+  await web.server(db)
   while (true) {
     const projectType = await selectKey({
       message: 'What do you want to do?',

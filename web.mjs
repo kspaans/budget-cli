@@ -1,6 +1,6 @@
 import http from 'node:http'
 
-import db from './db.mjs'
+import Database from './db.mjs'
 
 const head = `
 <!DOCTYPE html>
@@ -40,6 +40,7 @@ const head = `
     .prow .amount {
       margin-left: auto;
       margin-right: 0;
+      border: 1px solid black;
     }
     .actions {
       display: flex;
@@ -102,67 +103,78 @@ const script = `
 `
 
 /**
- * @param tx {Transaction}
- * @param i {string}
+ * @param db {Database}
  */
-const make_tx_row = (tx, i) => {
-  let credit_rows = ''
-  if (tx.tx_credit !== null) {
-    credit_rows = `
-      <div class="prow">
-        <div class="account">${tx.tx_credit}</div>
-        <div class="amount">${String(Number(tx.tx_amount).toFixed(2))}</div>
-      </div>
-    `
-  } else {
-    for (const p of db.db.postings_for_tx(tx.tx_id)) {
-      credit_rows += `
+const make_tx_row = (db) => {
+  /**
+   * @param tx {Transaction}
+   * @param i {number}
+   */
+  return (tx, i) => {
+    let credit_rows = ''
+    if (tx.tx_credit !== null) {
+      credit_rows = `
         <div class="prow">
-          <div class="account">${p.pst_account}</div>
-          <div class="amount">${String(Number(p.pst_amount).toFixed(2))}</div>
+          <div class="account">${tx.tx_credit}</div>
+          <div class="amount">${String(Number(tx.tx_amount).toFixed(2))}</div>
         </div>
       `
+    } else {
+      for (const p of db.postings_for_tx(tx.tx_id)) {
+        // sorta works but the width needs to be the proportion of the parent div
+        // not just the remaining space inside of the row after the account name
+        // is there. And the width should control just the background colour bar
+        // not the placement of the money amount
+        const total = tx.tx_amount ? tx.tx_amount : p.pst_amount // gross hack for now
+        const w = (p.pst_amount / total) * 100
+        credit_rows += `
+          <div class="prow">
+            <div class="account">${p.pst_account}</div>
+            <div class="amount" style="width: ${w}%;">${String(Number(p.pst_amount).toFixed(2))}</div>
+          </div>
+        `
+      }
     }
-  }
 
-  return `
-    <div style="display: flex;">
-      <div class="box">
-        <div class="tx_head">
-          <div>${tx.tx_date}</div>
-          <div class="posted" id="posted${i}" style="display: none;">*</div>
-          <div>${tx.tx_payee}</div>
-        </div>
-        <div class="postings">
-          ${credit_rows}
-          <div class="prow debit">
-            <div class="account">${tx.tx_debit}</div>
-            <div class="amount">-${String(Number(tx.tx_amount).toFixed(2))}</div>
+    return `
+      <div style="display: flex;">
+        <div class="box">
+          <div class="tx_head">
+            <div>${tx.tx_date}</div>
+            <div class="posted" id="posted${i}" style="display: none;">*</div>
+            <div>${tx.tx_payee}</div>
+          </div>
+          <div class="postings">
+            ${credit_rows}
+            <div class="prow debit">
+              <div class="account">${tx.tx_debit}</div>
+              <div class="amount">-${String(Number(tx.tx_amount).toFixed(2))}</div>
+            </div>
           </div>
         </div>
+        <div class="actions">
+          <button id="update_button">Update</button>
+          <button id="posted_button" data-i=${i}>Toggle Post</button>
+          <button id="delete_button">Delete</button>
+        </div>
       </div>
-      <div class="actions">
-        <button id="update_button">Update</button>
-        <button id="posted_button" data-i=${i}>Toggle Post</button>
-        <button id="delete_button">Delete</button>
-      </div>
-    </div>
-  `
+    `
+  }
 }
 
 /**
- * @param transactions {Array<{tx_id: number}>}
+ * @param db {Database}
  */
-const server = async (transactions) => {
+const server = async (db) => {
   /**
-   * @param _ {IncomingMessage}
-   * @param res {Response}
+   * @param _ {http.IncomingMessage}
+   * @param res {http.ServerResponse}
    */
   const handler = (_, res) => {
     res.writeHead(200, {'Content-Type': 'text/HTML'})
 
     const table = () => {
-      return transactions.map(make_tx_row).join('\n')
+      return db.transactions().map(make_tx_row(db)).join('\n')
     }
 
     res.end(head + body + table() + '</div></body>' + script + '</html>')
