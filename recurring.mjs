@@ -2,12 +2,6 @@ import { cancel, isCancel, note, selectKey } from '@clack/prompts'
 
 import Database from './db.mjs'
 
-const rmap = {
-  a: '; :recurring: annually',
-  m: '; :recurring: monthly',
-  b: '; :recurring: bi-weekly',
-  w: '; :recurring: weekly',
-}
 const rmap_human = {
   a: 'annually',
   m: 'monthly',
@@ -84,13 +78,15 @@ const recurring = async (db) => {
             for await (const t of db.transactions()) {
               if (t.tx_date > target) {
                 // TODO have to map between the two sets of columns
-                const new_tx = {
-                  ...rtx,
-                  recurring_frequency: rmap[rtx.rx_frequency],
-                  date: target,
-                }
-                delete new_tx.rx_start_date
-                delete new_tx.rx_frequency
+                // @type { 
+                const {
+                  rx_start_date,
+                  rx_frequency,
+                  ...new_tx
+                } = rtx
+                // TODO needed once I figure out how to map tx to rx
+                // new_tx['recurring_frequency'] = rmap[rtx.rx_frequency]
+                // new_tx['date'] = target
                 if (create_new_flag) {
                   new_txns.push(new_tx)
                 }
@@ -115,7 +111,9 @@ const recurring = async (db) => {
                 }
                 create_new_flag = true
               }
-              if (t.ruuid === rtx.ruuid) {
+              // TODO need a tx_rx join table
+              /*
+              if (t.ruuid === rtx.rx_uuid) {
                 const p = await selectKey({
                   message: `Post/unpost this transaction? $${t.tx_date} - ${t.tx_payee} - ${t.tx_debit} - ${t.tx_posted ? '' : 'not'}posted?`,
                   options: [
@@ -123,9 +121,10 @@ const recurring = async (db) => {
                     { value: 'n', label: 'No' }
                   ],
                 })
-                t.isPosted = p === 'y'
+                t.tx_posted = p === 'y'
                 create_new_flag = false
               }
+              */
             }
           }
         }

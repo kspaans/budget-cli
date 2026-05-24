@@ -5,7 +5,7 @@ import { amount_prompt, currency_prompt, date_prompt } from './lib.js'
 
 /**
  * @param db {Database}
- * @param config {Function}
+ * @param config {Config}
  */
 const currency = async (db, config) => {
   note('See your currencies, and add new ones')
@@ -97,7 +97,7 @@ const add = async (db) => {
 
 /**
  * @param db {Database}
- * @param config {Object}
+ * @param config {Config}
  */
 const exchange = async (db, config) => {
   const date = await date_prompt('When does the exchange happen?')
@@ -143,9 +143,9 @@ const exchange = async (db, config) => {
 
   db.exec(`BEGIN TRANSACTION`)
   //
-  const tx_id = db.insert_tx(date, 'Exchange', null, null, null, 1, null).lastInsertRowid
+  const tx_id = db.insert_tx(date, 'Exchange', null, null, null, 1, null)
   db.insert_posting(-from_amount, account, tx_id, from_currency)
-  db.insert_posting(fx_amount,   account, tx_id, to_currency )
+  db.insert_posting(fx_amount,    account, tx_id, to_currency  )
   db.exec(`COMMIT`)
   return
 }

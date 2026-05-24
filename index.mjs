@@ -81,10 +81,11 @@ try {
   config.liability_accounts = accounts.liability_accounts
 } catch (err) {
   log.warn(`Error when intializing accounts`)
-  if (err.code === 'ENOENT') {
+  const node_error = /** @type ErrnoException */ err
+  if (node_error.code === 'ENOENT') {
     log.warn(`It looks like your .accounts.json file is missing, please creat it`)
   } else {
-    log.warn(`Error code ${err.code}`)
+    log.warn(`Error code ${node_error.code}`)
   }
   process.exit(1)
 }
@@ -138,7 +139,7 @@ async function main_loop() {
 
         db.exec(`BEGIN TRANSACTION`)
         //                                       credit  debit  amt    cur_id
-        const tx_id = db.insert_tx(date, payee, null, null, null, 0, null).lastInsertRowid
+        const tx_id = db.insert_tx(date, payee, null, null, null, 0, null)
 
         // support just a single currency for now, for ease of balancing
         const cur_id = await currency_prompt(db, 'Which currency should this transaction use?')

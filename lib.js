@@ -26,9 +26,9 @@ const amount_prompt = async (message) => {
 /**
  * @param db {Database}
  * @param message {string}
- * @returns {Promise<number>}
+ * @returns {Promise<CurrencyID>}
  */
-const currency_prompt = async(db, message) => {
+const currency_prompt = async (db, message) => {
   /**
    * @param c {Currency}
    */
@@ -39,7 +39,7 @@ const currency_prompt = async(db, message) => {
     }
   }
   const currencies = db.currencies().map(make_currency_option)
-  return Number(await select({
+  return /** @type CurrencyID */ (await select({
     message,
     options: currencies
   }))

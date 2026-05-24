@@ -51,9 +51,10 @@ export default class Database {
           cur_id INTEGER REFERENCES currencies(cur_id)
       );
     `)
+    const rows_query = this.database.prepare('SELECT COUNT(tx_id) AS rows FROM transactions').get()
     note(
       `Done running db init\n` +
-      `there are ${this.database.prepare('SELECT COUNT(tx_id) AS rows FROM transactions').get().rows} rows in the DB currently`
+      `there are ${rows_query?.rows} rows in the DB currently`
     )
 
     this.count_currency_by_id = this.database.prepare(`
@@ -181,9 +182,11 @@ export default class Database {
    * @param amount {number?}
    * @param posted {number}
    * @param currency_id {number?}
+   *
+   * @returns {TransactionID}
    */
   insert_tx(date, payee, credit_cat, debit_cat, amount, posted, currency_id) {
-    return this.db_insert_tx.run(date, payee, credit_cat, debit_cat, amount, posted, currency_id)
+    return /** @type TransactionID */ (this.db_insert_tx.run(date, payee, credit_cat, debit_cat, amount, posted, currency_id).lastInsertRowid)
   }
 
   /**
@@ -197,12 +200,12 @@ export default class Database {
    * @param ruuid {String}
    */
   insert_recurring(start_date, date, payee, amount, expense_cat, debit_cat, frequency, ruuid) {
-    return this.db_insert_recurring.run(start_date, date, payee, amount, expense_cat, debit_cat, frequency, ruuid)
+    return /** @type RecurringID */ (this.db_insert_recurring.run(start_date, date, payee, amount, expense_cat, debit_cat, frequency, ruuid).lastInsertRowid)
   }
 
   /**
-   * @param rx_id {number}
-   * @param tx_id {number}
+   * @param rx_id {RecurringID}
+   * @param tx_id {TransactionID}
    */
   insert_rtx(rx_id, tx_id) {
     return this.db_insert_rtx.run(rx_id, tx_id)
@@ -211,8 +214,8 @@ export default class Database {
   /**
    * @param amount {number}
    * @param account {String}
-   * @param tx_id {number}
-   * @param cur_id {number}
+   * @param tx_id {TransactionID}
+   * @param cur_id {CurrencyID}
    */
   insert_posting(amount, account, tx_id, cur_id) {
     return this.db_insert_posting.run(amount, account, tx_id, cur_id)
@@ -222,22 +225,22 @@ export default class Database {
    * @returns {Array<Transaction>}
    */
   transactions() {
-    return this.get_transactions_by_date.all()
+    return /** @type Array<Transaction> */ (/** @type unknown */ (this.get_transactions_by_date.all()))
   }
 
   /**
-   * @param tx_id {number}
+   * @param tx_id {TransactionID}
    * @returns {Array<Posting>}
    */
   postings_for_tx(tx_id) {
-    return this.get_postings_by_tx_id.all(tx_id)
+    return /** @type Array<Posting> */ (this.get_postings_by_tx_id.all(tx_id))
   }
 
   /**
-   * @returns {string}
+   * @returns {Array<Recurring>}
    */
   recurring() {
-    return this.get_recurring.all()
+    return /** @type Array<Recurring> */ (this.get_recurring.all())
   }
 
   /**
@@ -245,29 +248,29 @@ export default class Database {
    * @returns {{cur_count: number}}
    */
   count_currency(cur_id) {
-    return this.count_currency_by_id.get(cur_id, cur_id)
+    return /** @type Record<"cur_count", number> */ (this.count_currency_by_id.get(cur_id, cur_id))
   }
 
   /**
    * @returns {Array<Currency>}
    */
   currencies() {
-    return this.get_currencies.all()
+    return /** @type Array<Currency> */ (this.get_currencies.all())
   }
 
   /**
    * @param cur_id {number}
-   * @returns {{cur_code: string} | null}
+   * @returns {Currency?}
    */
   currency_code(cur_id) {
-    return this.get_currency_code_by_id.get(cur_id)
+    return /** @type Currency */ (this.get_currency_code_by_id.get(cur_id))
   }
 
   /**
    * @returns {Currency}
    */
   default_currency() {
-    return this.get_default_currency.get()
+    return /** @type Currency */ (this.get_default_currency.get())
   }
 
   /**
@@ -276,7 +279,7 @@ export default class Database {
    * @param isDefault {boolean}
    */
   insert_currency(code, name, isDefault) {
-    const cur_id = this.db_insert_currency.run(code, name)
+    const cur_id = /** @type CurrencyID */ (this.db_insert_currency.run(code, name).lastInsertRowid)
     if (isDefault) {
       this.set_default_currency.run(cur_id)
     }

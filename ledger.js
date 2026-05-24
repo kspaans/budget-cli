@@ -25,7 +25,10 @@ const a2tx = (db) => {
   // handle missing currency while migrating all tx to use cur_id: default to
   // CAD
   let tx_currency_code = 'CAD'
-  const currency_result = db.currency_code(tx.cur_id)
+  let currency_result
+  if (tx.cur_id) {
+    currency_result = db.currency_code(tx.cur_id)
+  }
   if (currency_result !== undefined && currency_result !== null) {
     tx_currency_code = currency_result.cur_code
   }
@@ -56,7 +59,7 @@ const a2tx = (db) => {
   // if it's an exchange tx, the debit is handled above
   let debit_account_string = ''
   if (tx.tx_debit !== null) {
-    debit_account_string = String((-tx.tx_amount).toFixed(2)).padStart(config.amount_padding - tx.tx_debit.length, ' ')
+    debit_account_string = String((-(tx.tx_amount ? tx.tx_amount : 0)).toFixed(2)).padStart(config.amount_padding - tx.tx_debit.length, ' ')
   }
   // TODO handle recurring txs
   return `${tx.tx_date} ${tx.tx_posted ? '*' : ' '} ${tx.tx_payee}\n` +
